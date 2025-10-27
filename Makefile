@@ -29,7 +29,7 @@ INCLUDES	:=
 # options for code and add-in generation
 #---------------------------------------------------------------------------------
 
-MKG3AFLAGS := -n basic:example -i uns:../unselected.bmp -i sel:../selected.bmp
+MKG3AFLAGS := -n basic:SuperFX-CG -i uns:../unselected.bmp -i sel:../selected.bmp
 
 # Optional: add -flto to CFLAGS and LDFLAGS to enable link-time optimization
 # (LTO). Doing so will usually allow the compiler to generate much better code

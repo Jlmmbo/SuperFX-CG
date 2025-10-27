@@ -1,0 +1,61 @@
+00 | 000   | 001   | 010   | 011   | 100   | 101   | 110   | 111   ||     01|| 000   | 001   | 010   | 011   | 100   | 101   | 110   | 111   |
+000| BRK 00| TSB 04| PHP 08| TSB 0C| BPL 10| TRB 14| CLC 18| TRB 1C||-------|| ORA 01| ORA 05| ORA 09| ORA 0D| ORA 11| ORA 15| ORA 19| ORA 1D|
+---| s     | d     | s     | a     | r     | d     | i     | a     ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
+001| JSR 20| BIT 24| PLP 28| BIT 2C| BMI 30| BIT 34| SEC 38| bit 3C||-------|| AND 21| AND 25| AND 29| AND 2D| AND 31| AND 35| AND 39| AND 3D|
+---| a     | d     | s     | a     | r     | dx    | i     | ax    ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
+010| RTI 40| MVP 44| PHA 48| JMP 4C| BVC 50| MVN 54| CLI 58| JMP 5C||-------|| EOR 41| EOR 45| EOR 49| EOR 4D| EOR 51| EOR 55| EOR 59| EOR 5D|
+---| s     | xyc   | s     | a     | r     | xyc   | i     | al    ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
+011| RTS 60| STZ 64| PLA 68| JMP 6C| BVS 70| STZ 74| SEI 78| JMP 7C||-------|| A    DC 61| ADC 65| ADC 69| ADC 6D| ADC 71| ADC 75| ADC 79| ADC 7D|
+---| s     | d     | s     | ai    | r     | dx    | i     | axi   ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
+100| BRA 80| STY 84| DEY 88| STY 8C| BCC 90| STY 94| TYA 98| STZ 9C||-------|| STA 81| STA 85| BIT 89| STA 8D| STA 91| STA 95| STA 99| STA 9D|
+---| r     | d     | i     | a     | r     | dx    | i     | a     ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
+101| LDY A0| LDY A4| TAY A8| LDY AC| BCS B0| LDY B4| CLV B8| LDY BC||-------|| LDA A1| LDA A5| LDA A9| LDA AD| LDA B1| LDA B5| LDA B9| LDA BD|
+---| #     | d     | i     | a     | r     | dx    | i     | ax    ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
+110| CPY C0| CPY C4| INY C8| CPY CC| BNE D0| PEI D4| CLD D8| JML DC||-------|| CMP C1| CMP C5| CMP C9| CMP CD| CMP D1| CMP D5| CMP D9| CMP DD|
+---| #     | d     | i     | a     | r     | s     | i     | ai    ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
+111| CPX E0| CPX E4| INX E8| CPX EC| BEQ F0| PEA F4| SED F8| JSR FC||-------|| SBC E1| SBC E5| SBC E9| SBC ED| SBC F1| SBC F5| SBC F9| SBC FD|
+---| #     | d     | i     | a     | r     | s     | i     | axi   ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
+=============================================================================================================================================|
+10 |       |       |       |       |       |       |       |       ||-----11||       |       |       |       |       |       |       |       |
+000| COP 02| ASL 06| ASL 0A| ASL 0E| ORA 12| ASL 16| INC 1A| ASL 1E||-------|| ORA 03| ORA 07| PHD 0B| ORA 0F| ORA 13| ORA 17| TSC 1B| ORA 1F|
+---| s     | d     | A     | a     | di    | dx    | A     | ax    ||-------|| ds    | dli   | s     | al    |dsiy   |dliy   | i     | alx   |
+001| JSL 22| ROL 26| ROL 2A| ROL 2E| AND 32| ROL 36| DEC 3A| ROL 3E||-------|| AND 23| AND 27| PLD 2B| AND 2F| AND 33| AND 37| TSC 3B| AND 3F|
+---| al    | d     | A     | a     | di    | dx    | A     | ax    ||-------|| ds    | dli   | s     | al    |dsiy   |dliy   | i     | alx   |
+010| WDM 42| LSR 46| LSR 4A| LSR 4E| EOR 52| LSR 56| PHY 5A| LSR 5E||-------|| EOR 43| EOR 47| PHK 4B| EOR 4F| EOR 53| EOR 57| TCD 5B| EOR 5F|
+---| i     | d     | A     | a     | di    | dx    | s     | ax    ||-------|| ds    | dli   | s     | al    |dsiy   |dliy   | i     | alx   |
+011| PER 62| ROR 66| ROR 6A| ROR 6E| ADC 72| ROR 76| PLY 7A| ROR 7E||-------|| ADC 63| ADC 67| RTL 6B| ADC 6F| ADC 73| ADC 77| TDC 7B| ADC 7F|
+---| s     | d     | A     | a     | di    | dx    | s     | ax    ||-------|| ds    | dli   | s     | al    |dsiy   |dliy   | i     | alx   |
+100| BRL 82| STX 86| TXA 8A| STX 8E| STA 92| STX 96| TXS 9A| STZ 9E||-------|| STA 83| STA 87| PHB 8B| STA 8F| STA 93| STA 97| TXY 9B| STA 9F|
+---| rl    | d     | i     | a     | di    | dy    | i     | ax    ||-------|| ds    | dli   | s     | al    |dsiy   |dliy   | i     | alx   |
+101| LDX A2| LDX A6| TAX AA| LDX AE| LDA B2| LDX B6| TSX BA| LDX BE||-------|| LDA A3| LDA A7| PLB AB| LDA AF| LDA B3| LDA B7| TYX BB| LDA BF|
+---| #     | d     | i     | a     | di    | dy    | i     | ay    ||-------|| ds    | dli   | s     | al    |dsiy   |dliy   | i     | alx   |
+110| REP C2| DEC C6| DEX CA| DEC CE| CMP D2| DEC D6| PHX DA| DEC DE||-------|| CMP C3| CMP C7| WAI CB| CMP CF| CMP D3| CMP D7| STP DB| CMP DF|
+---| #     | d     | i     | a     | di    | dx    | s     | ax    ||-------|| ds    | dli   | i     | al    |dsiy   |dliy   | i     | alx   |
+111| SEP E2| INC E6| NOP EA| INC EE| SBC F2| INC F6| PLX FA| INC FE||-------|| SBC E3| SBC E7| XBA EB| SBC EF| SBC F3| SBC F7| XCE FB| SBC FF|
+---| #     | d     | i     | a     | di    | dx    | s     | ax    ||-------|| ds    | dli   | i     | al    |dsiy   |dliy   | i     | alx   |
+
+
+a    : Absolute                        : op adh adl; mem[adh,adl] = v;
+axi  : Absolute Indexed Indirect       : 
+ax   : Absolute Indexed with X         : op adh adl; mem[adh,adl+x] = v;
+ay   : Absolute Indexed with Y         : op adh adl; mem[adh,adl+y] = v;
+ai   : Absolute Indirect               : op zpptr; mem[zpptr] = adl; mem[zpptr+1] = adh; mem[adh,adl] = v;
+alx  : Absolute Long Indexed With X    : 
+al   : Absolute Long                   : 
+A    : Accumulator                     : 
+xyc  : Block Move ?                    : 
+dxi  : Direct Indexed Indirect         : 
+dx   : Direct Indexed with X           : 
+dy   : Direct Indexed with Y           : 
+diy  : Direct Indirect Indexed         : 
+dliy : Direct Indirect Long Indexed    : 
+dli  : Direct Indirect Long            : 
+di   : Direct Indirect                 : 
+d    : Direct                          : 
+#    : Immediate                       : op v;
+i    : Implied ?                       : op;
+rl   : Program Counter Relative Long   : 
+r    : Program Counter Relative        : 
+s    : Stack                           : 
+ds   : Stack Relative                  : 
+dsiy : Stack Relative Indirect Indexed : 
