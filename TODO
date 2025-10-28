@@ -1,0 +1,9 @@
+- Memory mapping
+- implement instruction decoding (instr_array)
+- instruction timings
+- peripherals:
+    - ppu
+    - screen
+    - audio
+    - controller
+    - other memory mapped peripherals

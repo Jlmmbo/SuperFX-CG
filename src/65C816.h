@@ -33,6 +33,12 @@ typedef struct {
     long int size:24;//long to ensure at least 24 bits reg. int may only be 16
 }Rom;
 
+typedef struct {
+    address (*addr_func)(CPUState*, address);
+    two_bytes (*ALU_func)(CPUState*, address);
+    byte cycle_count;
+    byte read_bytes;
+}instr_data;
 
 address inc_addr(address addr){
     uint32_t final_addr = addr.bank * 65536 + addr.addr + 1;
@@ -42,6 +48,7 @@ address inc_addr(address addr){
 /*stub.
 Will write rom to proper memory banks/regions, 
 and allocate non-rom used banks (e.g. ram, sram, i/o &c.)*/
+
 char write_rom(CPUState* cpu,Rom rom){
     byte rom_bitmask;
     if(rom_bitmask == 0);
@@ -106,19 +113,22 @@ char mem_set(CPUState* cpu, byte value, address addr){
 
 
 //absolute
-address a(CPUState* cpu, two_bytes addr){
-    return (address){cpu->DBR, addr.h * 256 + addr.l};
+address a(CPUState* cpu, address addr){
+    return (address){cpu->DBR, addr.addr};
 }
 
 //absolute indexed x
-address ax(CPUState* cpu, two_bytes addr){
-    return (address){cpu->DBR, addr.h * 256 + addr.l + cpu->X.h * 256 + cpu->X.l};
+address ax(CPUState* cpu, address addr){
+    return (address){cpu->DBR, addr.addr + cpu->X.h * 256 + cpu->X.l};
 }
 
 //absolute indexed y
-address ay(CPUState* cpu, two_bytes addr){
-    return (address){cpu->DBR, addr.h * 256 + addr.l + cpu->X.h * 256 + cpu->X.l};
+address ay(CPUState* cpu, address addr){
+    return (address){cpu->DBR, addr.addr + cpu->X.h * 256 + cpu->X.l};
 }
+
+instr_data test_data = {a, 1, 1};
+
 
 //absolute long indexed x
 address alx(CPUState* cpu, address addr){
@@ -132,71 +142,66 @@ address al(CPUState* cpu, address addr){
 }
 
 //direct indirect indexed x
-address dxi(CPUState* cpu, byte offset){
-    uint32_t direct_address = (cpu->D.h * 256 + cpu->D.l + offset + cpu->X.h * 256 + cpu->X.l) % 65536;
+address dxi(CPUState* cpu, address offset){//ignore offset.addr, type is addres for type compatibility with instr_data.addr_func
+    uint32_t direct_address = (cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->X.h * 256 + cpu->X.l) % 65536;
     return (address){cpu->DBR, direct_address};
 }
 
 //direct indexed x
-address dx(CPUState* cpu, byte offset){
-    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset + cpu->X.h * 256 + cpu->X.l};
+address dx(CPUState* cpu, address offset){
+    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->X.h * 256 + cpu->X.l};
 }
 
 //direct indexed y
-address dy(CPUState* cpu, byte offset){
-    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset + cpu->Y.h * 256 + cpu->Y.l};
+address dy(CPUState* cpu, address offset){
+    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->Y.h * 256 + cpu->Y.l};
 }
 
 //direct indirect indexed y
-address diy(CPUState* cpu, byte offset){
-    uint32_t direct_address = cpu->D.h * 256 + cpu->D.l + offset + cpu->DBR * 65536 + cpu->Y.h * 256 + cpu->Y.l;
+address diy(CPUState* cpu, address offset){
+    uint32_t direct_address = cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->DBR * 65536 + cpu->Y.h * 256 + cpu->Y.l;
     return (address){direct_address / 65536, direct_address % 65536};
 }
 
 //direct long indirect indexed y
-address dliy(CPUState* cpu, byte offset){
-    uint32_t direct_addr = (cpu->D.h * 256 + cpu->D.l + offset + cpu->Y.h * 256 + cpu->Y.l) % 16777216;
+address dliy(CPUState* cpu, address offset){
+    uint32_t direct_addr = (cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->Y.h * 256 + cpu->Y.l) % 16777216;
     return (address){direct_addr / 65536, (direct_addr) % 65536};
 }
 
 //direct long indirect
-address dli(CPUState* cpu, byte offset){
-    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset};
+address dli(CPUState* cpu, address offset){
+    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset.bank};
 }
 
 //direct indirect
-address di(CPUState* cpu, byte offset){
-    return (address){cpu->DBR, cpu->D.h * 256 + cpu->D.l + offset};
+address di(CPUState* cpu, address offset){
+    return (address){cpu->DBR, cpu->D.h * 256 + cpu->D.l + offset.bank};
 }
 
 //direct
-address d(CPUState* cpu, two_bytes addr){
-    return (address){0x00, addr.h * 256 + addr.l};
+address d(CPUState* cpu, address addr){
+    return (address){0x00, addr.addr};
 }
 
 //relative long
-address rl(CPUState* cpu){
-    return (address){0x00,0x00};
-}
-
-//relative
-address r(CPUState* cpu){
+address rl(CPUState* cpu, address addr){
     return (address){0x00,0x00};
 }
 
 //stack
-address s(CPUState* cpu){
+address s(CPUState* cpu, address addr){
     return (address){0x00,cpu->S.h * 256 + cpu->S.l}; //??????????
 }
 
 //stack relative
-address ds(CPUState* cpu, byte offset){
-    return (address){0x00, cpu->S.h * 256 + cpu->S.l + offset};
+address ds(CPUState* cpu, address offset){
+    return (address){0x00, cpu->S.h * 256 + cpu->S.l + offset.bank};
 }
 
 //stack relative indirect indexed y
-address dsiy(CPUState* cpu, byte offset){
-    address base_addr = {cpu->DBR, cpu->S.h * 256 + cpu->S.l + offset};
+address dsiy(CPUState* cpu, address offset){
+    address base_addr = {cpu->DBR, cpu->S.h * 256 + cpu->S.l + offset.bank};
     return (address){0x00,};
 }
 
@@ -244,9 +249,9 @@ two_bytes ADC(CPUState* cpu, address v){
 
 two_bytes STA(CPUState* cpu, address v){
     if (cpu->P.M){
-            cpu->mem[v.bank][v.addr] = cpu->C.l;
-            return cpu->C;
-        }
+        cpu->mem[v.bank][v.addr] = cpu->C.l;
+        return cpu->C;
+    }
     cpu->mem[v.bank][v.addr] = cpu->C.l;
     address inc_ed = inc_addr(v);
     cpu->mem[inc_ed.bank][inc_ed.addr] = cpu->C.h;
@@ -255,9 +260,9 @@ two_bytes STA(CPUState* cpu, address v){
 
 two_bytes LDA(CPUState* cpu, address v){
     if (cpu->P.M){
-            cpu->C.l = mem_fetch(cpu, v);
-            return cpu->C;
-        }
+        cpu->C.l = mem_fetch(cpu, v);
+        return cpu->C;
+    }
     cpu->C.l = mem_fetch(cpu, v);
     address inc_ed = inc_addr(v);
     cpu->C.h = mem_fetch(cpu, inc_ed);
@@ -278,20 +283,283 @@ two_bytes CMP(CPUState* cpu, address v){
 
 two_bytes SBC(CPUState* cpu, address v){
     if (cpu->P.M){
-            two_bytes ans = sub_2_1(cpu->C, mem_fetch(cpu, v));
-            cpu->C.l = ans.l;
-            if (ans.h != 0x00){
-                cpu->P.E = 1;
-            }
-            return cpu->C;
+        two_bytes ans = sub_2_1(cpu->C, mem_fetch(cpu, v));
+        cpu->C.l = ans.l;
+        if (ans.h != 0x00){
+            cpu->P.E = 1;
         }
+        return cpu->C;
+    }
     cpu->C = sub_2_2(cpu->C, (two_bytes){mem_fetch(cpu, v), mem_fetch(cpu, inc_addr(v))});
     return cpu->C;
 }
 
+const instr_data instructions[] = {
+    {s, 7, 2, BRK},//BRK
+    {dxi, 6, 2, ORA},//ORA
+    {s, 7, 2, COP},//COP
+    {ds, 4, 2, ORA},//ORA
+    {},//TSB
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+    {},//
+};
+
 /*run instruction
 returns 0 for success; 1: somehow illegal opcode; 2:...*/
 char run_instr_cpu(CPUState* cpu){
+    char instr = mem_fetch(cpu, (address){cpu->PBR, cpu->PC});
+    instr_data instruction = instructions[instr];
+}
+/*char run_instr_cpu(CPUState* cpu){
     char instr = mem_fetch(cpu, (address){cpu->PBR, cpu->PC});
     inc_PC(cpu);
     char type = instr & 0b00000011;
@@ -426,7 +694,7 @@ char run_instr_cpu(CPUState* cpu){
             }
         }
         else if (addr_mode == 0b011){//absolute
-            address effective_addr;
+            address effective_addr = a(cpu, );
             if(instr_type == 0b000){//TSB
 
             }
@@ -460,7 +728,7 @@ char run_instr_cpu(CPUState* cpu){
 
     }
     return 0;
-}
+}*/
 
 void cycle_cpu(CPUState* cpu){
     run_instr_cpu(cpu);
