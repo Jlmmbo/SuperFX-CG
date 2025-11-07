@@ -1,9 +1,12 @@
 - Memory mapping
+- properly handle/set P.V
 - implement instruction decoding (instr_array)
-- instruction timings
 - peripherals:
     - ppu
     - screen
     - audio
     - controller
     - other memory mapped peripherals
+- GUI
+- rom loading
+- multiple simultaneous rom accesses, (ppu & cpu)

@@ -1,6 +1,10 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "binary.h"
+#include "65C816.h"
+#include "UI.h"
+
 const unsigned short* keyboard_register = (unsigned short*)0xA44B0000;
 unsigned short lastkey[8];
 unsigned short holdkey[8];

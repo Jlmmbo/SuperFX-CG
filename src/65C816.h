@@ -1,4 +1,27 @@
-//make addr-mode funcs return effective addr instead of value @ that addr
+#define CYCLE_TIME (62)
+//~62 home ticks per 65c816 tick
+
+//function prototypes
+
+byte status_to_byte(StatusReg);
+StatusReg byte_to_status(byte);
+void status_apply_mask(StatusReg*, byte, byte);
+
+address inc_addr(address);
+address add_addr(address, uint16_t);
+
+char write_rom(CPUState*, Rom);
+
+void init_cpu(CPUState*, Rom);
+
+uint16_t inc_PC(CPUState*);
+
+byte mem_fetch(CPUState*, address);
+char mem_set(CPUState*, byte, address);
+
+char run_instr_cpu(CPUState*);
+void cycle_cpu(CPUState*);
+
 
 typedef struct {
     byte bank;
@@ -6,26 +29,60 @@ typedef struct {
 }address;
 
 typedef struct{
-    char N:1;
-    char V:1;
-    char M:1;
-    char X:1;
-    char D:1;
-    char I:1;
-    char Z:1;
-    char E:1;//E:emulation or carry
+    char N:1;//bit 7: Negative
+    char V:1;//bit 6: oVerflow
+    char M:1;//bit 5: Memory/accumulator size (0: 16-bit, 1: 8-bit)
+    char X:1;//bit 4: indeX size (0:16-bit, 1:8-bit)
+    char D:1;//bit 3: Decimal mode
+    char I:1;//bit 2: Interrupt disable (only on IRQ)
+    char Z:1;//bit 1: Zero
+    char E:1;//bit 0: Emulation or Carry
 }StatusReg;
 
+byte status_to_byte(StatusReg P){
+    byte out = 0x00;
+    out += P.E;
+    out += P.Z << 1;
+    out += P.I << 2;
+    out += P.D << 3;
+    out += P.X << 4;
+    out += P.M << 5;
+    out += P.V << 6;
+    out += P.N << 7;
+    return out;
+}
+
+StatusReg byte_to_status(byte P_byte){
+    StatusReg P;
+    P.E = P_byte & 0b00000001;
+    P.Z = (P_byte & 0b00000010) >> 1;
+    P.I = (P_byte & 0b00000100) >> 2;
+    P.D = (P_byte & 0b00001000) >> 3;
+    P.X = (P_byte & 0b00010000) >> 4;
+    P.M = (P_byte & 0b00100000) >> 5;
+    P.V = (P_byte & 0b01000000) >> 6;
+    P.N = (P_byte & 0b10000000) >> 7;
+    return P;
+}
+
+void status_apply_mask(StatusReg* P, byte set_bits, byte clear_bits){
+    byte P_byte = status_to_byte(*P);
+    P_byte = apply_mask(P_byte, set_bits, clear_bits);
+    *P = byte_to_status(P_byte);
+}
+
 typedef struct {
-    two_bytes X, Y;//index registers
-    two_bytes D;//direct register
+    uint16_t X, Y;//index registers
+    uint16_t D;//direct register
     two_bytes C;//accumulator
     StatusReg P;//processor status register
     uint16_t PC;//program counter
-    two_bytes S;//stack address register
+    uint16_t S;//stack address register
     byte DBR;//data bank register
     byte PBR;//program bank register
     byte* mem[256];//mem bank pointers
+    int expected_time;//when the current instruction should finish
+    int current_time;
 }CPUState;
 
 typedef struct {
@@ -34,21 +91,25 @@ typedef struct {
 }Rom;
 
 typedef struct {
-    address (*addr_func)(CPUState*, address);
-    two_bytes (*ALU_func)(CPUState*, address);
+    address (*addr_func)(CPUState*);//function to calculate effective address
     byte cycle_count;
-    byte read_bytes;
+    byte read_bytes;//num of bytes read, includes opcode
+    void (*instr_func)(CPUState*, address);//function to excecute instruction
 }instr_data;
 
 address inc_addr(address addr){
-    uint32_t final_addr = addr.bank * 65536 + addr.addr + 1;
+    uint32_t final_addr = addr.bank * 65536 + addr.addr;
+    return (address){final_addr % 65536, final_addr / 65536};
+}
+
+address add_addr(address addr, uint16_t amt){
+    uint32_t final_addr = addr.bank * 65536 + addr.addr + amt;
     return (address){final_addr % 65536, final_addr / 65536};
 }
 
 /*stub.
 Will write rom to proper memory banks/regions, 
 and allocate non-rom used banks (e.g. ram, sram, i/o &c.)*/
-
 char write_rom(CPUState* cpu,Rom rom){
     byte rom_bitmask;
     if(rom_bitmask == 0);
@@ -59,26 +120,28 @@ char write_rom(CPUState* cpu,Rom rom){
 }
 
 
-Rom test_rom = {(byte[]){0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA},8};
+Rom test_rom = {(byte[]){0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA},8};//a bunch of NOPs
 
 
 
 /*start up cpu, initialize regs, set pc to ffffd,c*/
-void init_cpu(CPUState* cpu){
-    cpu->D = (two_bytes){0x00, 0x00};
+void init_cpu(CPUState* cpu, Rom rom){
+    cpu->current_time = RTC_GetTicks();
+    cpu->expected_time = RTC_GetTicks();
+    cpu->D = 0x0000;
     cpu->DBR = 0x00;
     cpu->PBR = 0x00;
-    cpu->S.h = 0x01;
-    cpu->X.h = 0x00;
-    cpu->Y.h = 0x00;
+    cpu->S = 0x0100 + (cpu->S & 0x0011);
+    cpu->X &= 0x0011;
+    cpu->Y &= 0x0011;
     cpu->P.M = 1;
     cpu->P.X = 1;
     cpu->P.D = 0;
     cpu->P.I = 1;
     cpu->P.E = 1;//set to emulation mode
     cpu->PC = cpu->mem[0][0xFFFD] * 256 + cpu->mem[0][0xFFFC];
-    char err = write_rom(cpu,test_rom);
-    if (err){
+    char err = write_rom(cpu, rom);
+    if (err){//failed to allocate
         Bdisp_AllClr_VRAM();
         PrintXY(1,1,"  GET MORE SPACE!!", 0, 0);
     }
@@ -86,14 +149,14 @@ void init_cpu(CPUState* cpu){
 
 
 
-//increment the program counter
+//increment program counter
 uint16_t inc_PC(CPUState* cpu){
     cpu->PC++;
-    return cpu->PC+1;
+    return cpu->PC;
 }
 
 /*Fetch memory from address in bank.
- If bank has not already been allocated, will call sys_realloc(bank)*/
+ If bank has not already been allocated, calls sys_realloc(bank)*/
 byte mem_fetch(CPUState* cpu, address addr){
     if(cpu->mem[addr.bank]==NULL){
         sys_realloc(cpu->mem[addr.bank], 65536 * sizeof(byte));
@@ -111,625 +174,314 @@ char mem_set(CPUState* cpu, byte value, address addr){
     return 0;
 }
 
-
 //absolute
-address a(CPUState* cpu, address addr){
-    return (address){cpu->DBR, addr.addr};
+address a(CPUState* cpu){
+    address addr = (address){cpu->PBR, cpu->PC};
+    return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255};
 }
-
-//absolute indexed x
-address ax(CPUState* cpu, address addr){
-    return (address){cpu->DBR, addr.addr + cpu->X.h * 256 + cpu->X.l};
+//absolute indexed indirect
+address axi(CPUState* cpu){
+    address addr = (address){cpu->PBR, cpu->PC};
+    return (address){0x00, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255 + cpu->X};
 }
-
-//absolute indexed y
-address ay(CPUState* cpu, address addr){
-    return (address){cpu->DBR, addr.addr + cpu->X.h * 256 + cpu->X.l};
+//absolute indexed X
+address ax(CPUState* cpu){
+    address addr = (address){cpu->PBR, cpu->PC};
+    return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255 + cpu->X};
 }
-
-instr_data test_data = {a, 1, 1};
-
-
-//absolute long indexed x
-address alx(CPUState* cpu, address addr){
-    uint32_t effective_addr = addr.bank * 65536 + addr.addr + cpu->Y.h * 256 + cpu->Y.l;
-    return (address){effective_addr / 65536, effective_addr % 65536};
+//absolute indexed Y
+address ay(CPUState* cpu){
+    address addr = (address){cpu->PBR, cpu->PC};
+    return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255 + cpu->Y};
 }
-
+//absolute indirect
+address ai(CPUState* cpu){
+    address addr = (address){cpu->PBR, cpu->PC};
+    return (address){0x00, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255};
+}
+//absolute long indexed
+address alx(CPUState* cpu){
+    address addr = (address){cpu->PBR, cpu->PC};
+    return (address){mem_fetch(cpu, inc_addr(inc_addr(addr))), mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255 + cpu->X};
+}
 //absolute long
-address al(CPUState* cpu, address addr){
-    return addr;
+address al(CPUState* cpu){
+    address addr = (address){cpu->PBR, cpu->PC};
+    return (address){mem_fetch(cpu, inc_addr(inc_addr(addr))), mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255};
 }
 
-//direct indirect indexed x
-address dxi(CPUState* cpu, address offset){//ignore offset.addr, type is addres for type compatibility with instr_data.addr_func
-    uint32_t direct_address = (cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->X.h * 256 + cpu->X.l) % 65536;
-    return (address){cpu->DBR, direct_address};
+/*address A(CPUState* cpu){
+    return (address){cpu->PBR, cpu->PC};
+}*/
+//block move
+address xyc(CPUState* cpu){
+    return (address){cpu->DBR, mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
 }
-
-//direct indexed x
-address dx(CPUState* cpu, address offset){
-    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->X.h * 256 + cpu->X.l};
+//direct indexed indirect
+address dxi(CPUState* cpu){
+    return (address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->X};
 }
-
-//direct indexed y
-address dy(CPUState* cpu, address offset){
-    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->Y.h * 256 + cpu->Y.l};
+//direct indexed X
+address dx(CPUState* cpu){
+    return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->X};
 }
-
-//direct indirect indexed y
-address diy(CPUState* cpu, address offset){
-    uint32_t direct_address = cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->DBR * 65536 + cpu->Y.h * 256 + cpu->Y.l;
-    return (address){direct_address / 65536, direct_address % 65536};
+//direct indexed Y
+address dy(CPUState* cpu){
+    return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->Y};
 }
-
-//direct long indirect indexed y
-address dliy(CPUState* cpu, address offset){
-    uint32_t direct_addr = (cpu->D.h * 256 + cpu->D.l + offset.bank + cpu->Y.h * 256 + cpu->Y.l) % 16777216;
-    return (address){direct_addr / 65536, (direct_addr) % 65536};
+//direct indirect indexed
+address diy(CPUState* cpu){
+    return add_addr((address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
 }
-
+//direct long indirecte indexed
+address dliy(CPUState* cpu){
+    return add_addr((address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
+}
 //direct long indirect
-address dli(CPUState* cpu, address offset){
-    return (address){0x00, cpu->D.h * 256 + cpu->D.l + offset.bank};
+address dli(CPUState* cpu){
+    return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
 }
-
 //direct indirect
-address di(CPUState* cpu, address offset){
-    return (address){cpu->DBR, cpu->D.h * 256 + cpu->D.l + offset.bank};
+address di(CPUState* cpu){
+    return (address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
 }
-
 //direct
-address d(CPUState* cpu, address addr){
-    return (address){0x00, addr.addr};
+address d(CPUState* cpu){
+    return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
 }
-
+// immediate
+address imm(CPUState* cpu){
+    return (address){cpu->PBR, cpu->PC};
+}
+//no address
+address nil(CPUState* cpu){
+    return (address){0, 0};
+}
 //relative long
-address rl(CPUState* cpu, address addr){
-    return (address){0x00,0x00};
+address rl(CPUState* cpu){
+    return (address){cpu->PBR, cpu->PC};//////////////////////////////////////////////////////////////////////////////
 }
-
+//relative
+address r(CPUState* cpu){
+    return (address){cpu->PBR, cpu->PC};//////////////////////////////////////////////////////////////////////////////
+}
 //stack
-address s(CPUState* cpu, address addr){
-    return (address){0x00,cpu->S.h * 256 + cpu->S.l}; //??????????
+address s(CPUState* cpu){
+    return (address){0x00, cpu->S};
+}
+//direct stack
+address ds(CPUState* cpu){
+    return add_addr((address){0x00, cpu->S}, mem_fetch(cpu, (address){cpu->PBR, cpu->PC}));
+}
+//direct stack indirect indexed
+address dsiy(CPUState* cpu){
+    return add_addr((address){cpu->DBR, cpu->S + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
 }
 
-//stack relative
-address ds(CPUState* cpu, address offset){
-    return (address){0x00, cpu->S.h * 256 + cpu->S.l + offset.bank};
+void BRK(CPUState* cpu, address addr){
+
 }
 
-//stack relative indirect indexed y
-address dsiy(CPUState* cpu, address offset){
-    address base_addr = {cpu->DBR, cpu->S.h * 256 + cpu->S.l + offset.bank};
-    return (address){0x00,};
-}
-
-
-two_bytes ORA(CPUState* cpu, address v){
-    if (cpu->P.M){
-        cpu->C.l |= mem_fetch(cpu, v);
-        return cpu->C;
+void ORA(CPUState* cpu, address addr){
+    if(cpu->P.M){//16-bit
+        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255;
+        cpu->C = separate_bytes(v | bytes_to_int(cpu->C.h, cpu->C.l));
+        cpu->P.N = cpu->C.h >> 7;
+        cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+        return;
     }
-    cpu->C = (two_bytes){cpu->C.h | mem_fetch(cpu, v), cpu->C.l | mem_fetch(cpu, inc_addr(v))};
-    return cpu->C;
+    byte v = mem_fetch(cpu, addr);
+    cpu->C.l = cpu->C.l | v;
+    cpu->P.N = cpu->C.l >> 7;
+    cpu->P.Z = cpu->C.l == 0;
 }
 
-two_bytes AND(CPUState* cpu, address v){
-    if (cpu->P.M){
-        cpu->C.l &= mem_fetch(cpu, v);
-        return cpu->C;
+void COP(CPUState* cpu, address addr){
+     
+}
+
+void TSB(CPUState* cpu, address addr){
+
+}
+
+void ASL(CPUState* cpu, address addr){
+
+}
+
+void PHP(CPUState* cpu, address addr){
+
+}
+
+void ASLA(CPUState* cpu, address addr){
+    
+}
+
+void PHD(CPUState* cpu, address addr){
+
+}
+
+void BPL(CPUState* cpu, address addr){
+
+}
+
+void TRB(CPUState* cpu, address addr){
+    
+}
+
+void CLC(CPUState* cpu, address addr){
+    
+}
+
+void INCA(CPUState* cpu, address addr){
+    
+}
+
+void TCS(CPUState* cpu, address addr){
+    
+}
+
+void JSR(CPUState* cpu, address addr){
+
+}
+
+void AND(CPUState* cpu, address addr){
+    if(cpu->P.M){//16-bit
+        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255;
+        cpu->C = separate_bytes(v & bytes_to_int(cpu->C.h, cpu->C.l));
+        cpu->P.N = cpu->C.h >> 7;
+        cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+        return;
     }
-    cpu->C = (two_bytes){cpu->C.h & mem_fetch(cpu, v), cpu->C.l & mem_fetch(cpu, inc_addr(v))};
-    return cpu->C;
+    byte v = mem_fetch(cpu, addr);
+    cpu->C.l = cpu->C.l & v;
+    cpu->P.N = cpu->C.l >> 7;
+    cpu->P.Z = cpu->C.l == 0;
 }
 
-two_bytes EOR(CPUState* cpu, address v){
-    if (cpu->P.M){
-        cpu->C.l ^= mem_fetch(cpu, v);
-        return cpu->C;
+
+void JSL(CPUState* cpu, address addr){
+
+}
+
+void BIT(CPUState* cpu, address addr){
+    if(cpu->P.M){//16-bit
+        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 255;
+        two_bytes ans = (two_bytes){cpu->C.h & (v >> 8), cpu->C.l & (v & 0x00FF)}; 
+        cpu->P.N = ans.h >> 7;
+        cpu->P.V = (ans.h >> 6) & 0b01;//P.V = bit 14
+        cpu->P.Z = (ans.h == 0) && (ans.l == 0);
+        return;
     }
-    cpu->C = (two_bytes){cpu->C.h ^ mem_fetch(cpu, v), cpu->C.l ^ mem_fetch(cpu, inc_addr(v))};
-    return cpu->C;
+    byte v = mem_fetch(cpu, addr);
+    byte ans = cpu->C.l & v;
+    cpu->P.N = ans >> 7;
+    cpu->P.V = (ans >> 6) & 0b01;//P.V = bit 6
+    cpu->P.Z = ans == 0;
+}
+
+void ROL(CPUState* cpu, address addr){
 
 }
 
-two_bytes ADC(CPUState* cpu, address v){
-    if (cpu->P.M){
-            two_bytes ans = add_2_1(cpu->C, mem_fetch(cpu, v));
-            cpu->C.l = ans.l;
-            if (ans.h != 0x00){
-                cpu->P.E = 1;
-            }
-            return cpu->C;
-        }
-    cpu->C = add_2_2(cpu->C, (two_bytes){mem_fetch(cpu, v), mem_fetch(cpu, inc_addr(v))});
-    return cpu->C;
+void PLP(CPUState* cpu, address addr){
+
 }
 
-two_bytes STA(CPUState* cpu, address v){
-    if (cpu->P.M){
-        cpu->mem[v.bank][v.addr] = cpu->C.l;
-        return cpu->C;
-    }
-    cpu->mem[v.bank][v.addr] = cpu->C.l;
-    address inc_ed = inc_addr(v);
-    cpu->mem[inc_ed.bank][inc_ed.addr] = cpu->C.h;
-    return cpu->C;
+void ROLA(CPUState* cpu, address addr){
+
 }
 
-two_bytes LDA(CPUState* cpu, address v){
-    if (cpu->P.M){
-        cpu->C.l = mem_fetch(cpu, v);
-        return cpu->C;
-    }
-    cpu->C.l = mem_fetch(cpu, v);
-    address inc_ed = inc_addr(v);
-    cpu->C.h = mem_fetch(cpu, inc_ed);
-    return cpu->C;
-}
+void PLD(CPUState* cpu, address addr){
 
-two_bytes CMP(CPUState* cpu, address v){
-    if (cpu->P.M){
-        byte val = mem_fetch(cpu, v);
-        byte ans = cpu->C.l - val;
-        cpu->P.Z = ans == 0x00;
-        cpu->P.V = ((cpu->C.l >> 7) && (val >> 7)) && (ans >> 7 == 0);
-        cpu->P;
-        return cpu->C;
-    }
-    return cpu->C;
-}
-
-two_bytes SBC(CPUState* cpu, address v){
-    if (cpu->P.M){
-        two_bytes ans = sub_2_1(cpu->C, mem_fetch(cpu, v));
-        cpu->C.l = ans.l;
-        if (ans.h != 0x00){
-            cpu->P.E = 1;
-        }
-        return cpu->C;
-    }
-    cpu->C = sub_2_2(cpu->C, (two_bytes){mem_fetch(cpu, v), mem_fetch(cpu, inc_addr(v))});
-    return cpu->C;
 }
 
 const instr_data instructions[] = {
-    {s, 7, 2, BRK},//BRK
-    {dxi, 6, 2, ORA},//ORA
-    {s, 7, 2, COP},//COP
-    {ds, 4, 2, ORA},//ORA
-    {},//TSB
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
-    {},//
+    {s, 7, 2, BRK},
+    {dxi, 6, 2, ORA},
+    {s, 7, 2, COP},
+    {ds, 4, 2, ORA},
+    {d, 5, 2, TSB},
+    {d, 3, 2, ORA},
+    {d, 5, 2, ASL},
+    {dli, 6, 2, ORA},
+    {s, 3, 1, PHP},
+    {imm, 2, 2, ORA},
+    {nil, 2, 1, ASLA},
+    {s, 4, 1, PHD},
+    {a, 6, 3, TSB},
+    {a, 4, 3, ORA},
+    {a, 6, 3, ASL},
+    {al, 5, 2, ORA},
+    
+    {r, 2, 2, BPL},
+    {diy, 5, 2, ORA},
+    {di, 5, 2, ORA},
+    {dsiy, 7, 2, ORA},
+    {d, 5, 2, TRB},
+    {dx, 4, 2, ORA},
+    {dx, 6, 2, ASL},
+    {dliy, 6, 2, ORA},
+    {nil, 2, 1, CLC},
+    {ay, 4, 3, ORA},
+    {nil, 2, 1, INCA},
+    {nil, 2, 1, TCS},
+    {a, 6, 3, TRB},
+    {ax, 4, 3, ORA},
+    {ax, 7, 3, ASL},
+    {alx, 5, 4, ORA},
+    
+    {a, 6, 3, JSR},
+    {dxi, 6, 2, AND},
+    {al, 8, 4, JSL},
+    {ds, 4, 2, AND},
+    {d, 3, 2, BIT},
+    {d, 3, 2, AND},
+    {d, 5, 2, ROL},
+    {dli, 6, 2, AND},
+    {s, 4, 1, PLP},
+    {imm, 2, 2, AND},
+    {nil, 2, 1, ROLA},
+    {s, 5, 1, PLD},
+    {a, 4, 3, BIT},
+    {a, 4, 3, AND},
+    {a, 6, 3, ROL},
+    {al, 5, 4, AND},
+    /*
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    */
 };
 
 /*run instruction
 returns 0 for success; 1: somehow illegal opcode; 2:...*/
 char run_instr_cpu(CPUState* cpu){
     char instr = mem_fetch(cpu, (address){cpu->PBR, cpu->PC});
-    instr_data instruction = instructions[instr];
-}
-/*char run_instr_cpu(CPUState* cpu){
-    char instr = mem_fetch(cpu, (address){cpu->PBR, cpu->PC});
     inc_PC(cpu);
-    char type = instr & 0b00000011;
-    char addr_mode = instr & 0b00011100;
-    char instr_type = instr & 0b11100000;
-    if (type == 0b01){//most popular instructions should get checked first
-        address effective_addr;
-        two_bytes operand;
-        operand.l = cpu->mem[cpu->PBR][cpu->PC];
-        operand.h = cpu->mem[cpu->PBR][cpu->PC+1];
-        switch (addr_mode){
-            case 0b000://direct indirect indexed x
-                effective_addr = dxi(cpu, operand.l);
-                break;
-            case 0b001://direct
-                effective_addr = d(cpu, operand);
-                break;
-            case 0b010://immediate
-                effective_addr = (address){cpu->PBR, cpu->PC};
-                break;
-            case 0b011://absolute
-                effective_addr = a(cpu, operand);
-                break;
-            case 0b100://direct indirect indexed y
-                effective_addr = diy(cpu, operand.l);
-                break;
-            case 0b101://direct indexed x
-                effective_addr = dx(cpu, operand.l);
-                break;
-            case 0b110://absolute indexed y
-                effective_addr = ay(cpu, operand);
-                break;
-            case 0b111://absolute indexed x
-                effective_addr = ax(cpu, operand);
-                break;
-            default:
-                return 1;
-        }
-        switch (instr_type){
-            case 0b000:
-                ORA(cpu, effective_addr);
-                break;
-            case 0b001:
-                AND(cpu, effective_addr);
-                break;
-            case 0b010:
-                EOR(cpu, effective_addr);
-                break;
-            case 0b011:
-                ADC(cpu, effective_addr);
-                break;
-            case 0b100:
-                STA(cpu, effective_addr);
-                break;
-            case 0b101:
-                LDA(cpu, effective_addr);
-                break;
-            case 0b110:
-                CMP(cpu, effective_addr);
-                break;
-            case 0b111:
-                SBC(cpu, effective_addr);
-                break;
-            default:
-                return 1;
-        }
-        if(cpu->P.M == 1){
-            inc_PC(cpu);
-        }
-        else{
-            inc_PC(cpu);
-            inc_PC(cpu);
-        }
-    }
-    else if (type == 0b00){
-        if (addr_mode == 0b100){//branch instructions
-            byte take_branch;
-            if (instr_type == 0b000){//BPL
-                take_branch = !(cpu->P.N);
-            }
-            else if (instr_type == 0b001){//BMI
-                take_branch = cpu->P.N;
-            }
-            else if (instr_type == 0b010){//BVC
-                take_branch = !(cpu->P.V);
-            }
-            else if (instr_type == 0b011){//BVS
-                take_branch = cpu->P.V;
-            }
-            else if (instr_type == 0b100){//BCC
-                take_branch = !(cpu->P.E);
-            }
-            else if (instr_type == 0b101){//BCS
-                take_branch = cpu->P.E;
-            }
-            else if (instr_type == 0b110){//BNE
-                take_branch = !(cpu->P.Z);
-            }
-            else if (instr_type == 0b111){//BEQ
-                take_branch = cpu->P.Z;
-            }
-            inc_PC(cpu);
-            if(take_branch){
-                signed char operand = mem_fetch(cpu, (address){cpu->PBR, cpu->PC});
-                cpu->PC += operand;
-            }
-        }
-        else if(addr_mode == 0b110){//status flag stuff
-            if (instr_type == 0b000){//CLC
-                cpu->P.E = 0;
-            }
-            else if(instr_type == 0b001){//SEC
-                cpu->P.E = 1;
-            }
-            else if(instr_type == 0b010){//CLI
-                cpu->P.I = 0;
-            }
-            else if(instr_type == 0b011){//SEI
-                cpu->P.I = 1;
-            }
-            else if(instr_type == 0b100){//TYA
-                cpu->C = cpu->Y;
-            }
-            else if(instr_type == 0b101){//CLV
-                cpu->P.V = 0;
-            }
-            else if(instr_type == 0b110){//CLD
-                cpu->P.D = 0;
-            }
-            else if(instr_type == 0b111){//SED
-                cpu->P.D = 1;
-            }
-        }
-        else if (addr_mode == 0b011){//absolute
-            address effective_addr = a(cpu, );
-            if(instr_type == 0b000){//TSB
-
-            }
-            else if (instr_type == 0b001){//BIT
-
-            }
-            else if (instr_type == 0b010){//JMP a
-                
-            }
-            else if (instr_type == 0b011){//JMP ai
-                
-            }
-            else if (instr_type == 0b100){//STY
-                
-            }
-            else if (instr_type == 0b101){//LDY
-                
-            }
-            else if (instr_type == 0b110){//CPY
-                
-            }
-            else if (instr_type == 0b111){//CPX
-                
-            }
-        }
-    }
-    else if (type == 0b10){
-
-    }
-    else if (type == 0b11){
-
-    }
+    instr_data instruction = instructions[instr];
+    address addr = instruction.addr_func(cpu);
+    instruction.instr_func(cpu, addr);
+    cpu->PC += instruction.read_bytes;
+    cpu->expected_time += instruction.cycle_count * CYCLE_TIME;
     return 0;
-}*/
+}
 
 void cycle_cpu(CPUState* cpu){
     run_instr_cpu(cpu);
+    while(cpu->current_time < cpu->expected_time){
+        cpu->current_time = RTC_GetTicks();
+    }
 }

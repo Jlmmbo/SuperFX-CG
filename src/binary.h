@@ -3,8 +3,8 @@ typedef unsigned char byte;
 //typedef unsigned long int uint16_t;
 
 typedef struct{
-    byte h:8;
-    byte l:8;
+    byte h:8;//high byte
+    byte l:8;//low byte
 }two_bytes;
 
 /*typedef struct {
@@ -13,8 +13,12 @@ typedef struct{
     byte l;
 }three_bytes;*/
 
-/*convert an integer (0-65535) into a high byte and a low byte*/
-two_bytes separate_bytes(short n){
+byte apply_mask(byte val, byte set_bits, byte clear_bits){
+    return (val | set_bits) & clear_bits;
+}
+
+//convert an integer (0-65535) into a high byte and a low byte
+two_bytes separate_bytes(uint16_t n){
     short hi = n & 0xFF00;
     short lo = n & 0x00FF;
     return (two_bytes){(byte)hi, (byte)lo};
