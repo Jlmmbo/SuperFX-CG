@@ -1,9 +1,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "binary.h"
-#include "65C816.h"
-#include "UI.h"
+#define NON_BLOCK_DMA 1
 
 const unsigned short* keyboard_register = (unsigned short*)0xA44B0000;
 unsigned short lastkey[8];
@@ -31,3 +29,7 @@ int keydownhold(int basic_keycode) {
    bit = col + 8*(row&1); 
    return (0 != (holdkey[word] & 1<<bit)); 
 }
+
+#include "binary.h"
+#include "65C816.h"
+#include "UI.h"

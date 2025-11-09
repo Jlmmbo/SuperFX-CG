@@ -1,27 +1,6 @@
 #define CYCLE_TIME (62)
 //~62 home ticks per 65c816 tick
 
-//function prototypes
-
-byte status_to_byte(StatusReg);
-StatusReg byte_to_status(byte);
-void status_apply_mask(StatusReg*, byte, byte);
-
-address inc_addr(address);
-address add_addr(address, uint16_t);
-
-char write_rom(CPUState*, Rom);
-
-void init_cpu(CPUState*, Rom);
-
-uint16_t inc_PC(CPUState*);
-
-byte mem_fetch(CPUState*, address);
-char mem_set(CPUState*, byte, address);
-
-char run_instr_cpu(CPUState*);
-void cycle_cpu(CPUState*);
-
 
 typedef struct {
     byte bank;
@@ -77,7 +56,7 @@ typedef struct {
     two_bytes C;//accumulator
     StatusReg P;//processor status register
     uint16_t PC;//program counter
-    uint16_t S;//stack address register
+    two_bytes S;//stack address register
     byte DBR;//data bank register
     byte PBR;//program bank register
     byte* mem[256];//mem bank pointers
@@ -98,7 +77,7 @@ typedef struct {
 }instr_data;
 
 address inc_addr(address addr){
-    uint32_t final_addr = addr.bank * 65536 + addr.addr;
+    uint32_t final_addr = addr.bank * 65536 + addr.addr + 1;
     return (address){final_addr % 65536, final_addr / 65536};
 }
 
@@ -107,10 +86,11 @@ address add_addr(address addr, uint16_t amt){
     return (address){final_addr % 65536, final_addr / 65536};
 }
 
-/*stub.
+/*
+stub.
 Will write rom to proper memory banks/regions, 
-and allocate non-rom used banks (e.g. ram, sram, i/o &c.)*/
-char write_rom(CPUState* cpu,Rom rom){
+and allocate used non-rom banks (e.g. ram, sram, i/o &c.)*/
+char write_rom(CPUState* cpu, Rom rom){
     byte rom_bitmask;
     if(rom_bitmask == 0);
     for (byte bank = 0; bank<0xFF; bank++){
@@ -124,14 +104,14 @@ Rom test_rom = {(byte[]){0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA},8};//a bunch o
 
 
 
-/*start up cpu, initialize regs, set pc to ffffd,c*/
+/*start up cpu, initialize regs, set load interrupt vector etc.*/
 void init_cpu(CPUState* cpu, Rom rom){
     cpu->current_time = RTC_GetTicks();
     cpu->expected_time = RTC_GetTicks();
     cpu->D = 0x0000;
     cpu->DBR = 0x00;
     cpu->PBR = 0x00;
-    cpu->S = 0x0100 + (cpu->S & 0x0011);
+    cpu->S.h = 0x01;
     cpu->X &= 0x0011;
     cpu->Y &= 0x0011;
     cpu->P.M = 1;
@@ -164,7 +144,7 @@ byte mem_fetch(CPUState* cpu, address addr){
     return cpu->mem[addr.bank][addr.addr];
 }
 
-/*set memory at adress in bank.
+/*set memory at address in bank.
  If bank has not already been allocated, will call sys_realloc(bank)*/
 char mem_set(CPUState* cpu, byte value, address addr){
     if(cpu->mem[addr.bank]==NULL){
@@ -267,15 +247,15 @@ address r(CPUState* cpu){
 }
 //stack
 address s(CPUState* cpu){
-    return (address){0x00, cpu->S};
+    return (address){0x00, cpu->S.h * 255 + cpu->S.l};
 }
 //direct stack
 address ds(CPUState* cpu){
-    return add_addr((address){0x00, cpu->S}, mem_fetch(cpu, (address){cpu->PBR, cpu->PC}));
+    return add_addr((address){0x00, cpu->S.h * 255 + cpu->S.l}, mem_fetch(cpu, (address){cpu->PBR, cpu->PC}));
 }
 //direct stack indirect indexed
 address dsiy(CPUState* cpu){
-    return add_addr((address){cpu->DBR, cpu->S + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
+    return add_addr((address){cpu->DBR, cpu->S.h * 255 + cpu->S.l + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
 }
 
 void BRK(CPUState* cpu, address addr){
@@ -333,7 +313,11 @@ void CLC(CPUState* cpu, address addr){
 }
 
 void INCA(CPUState* cpu, address addr){
-    
+    if (cpu->P.M == 0){//16-bit
+        cpu->C = add_2_1(cpu->C, 0x01);
+        return;
+    }
+    cpu->C.l++;
 }
 
 void TCS(CPUState* cpu, address addr){
@@ -395,6 +379,30 @@ void PLD(CPUState* cpu, address addr){
 
 }
 
+void BMI(CPUState* cpu, address addr){
+
+}
+
+void SEC(CPUState* cpu, address addr){
+    cpu->P.E = 1;
+}
+
+void DECA(CPUState* cpu, address addr){
+    if (cpu->P.M == 0){//16-bit
+        cpu->C = sub_2_1(cpu->C, 0x01);
+        return;
+    }
+    cpu->C.l--;
+}
+
+void TSC(CPUState* cpu, address addr){
+    if (cpu->P.M == 0){//16-bit
+        cpu->C = (two_bytes){cpu->S.h, cpu->S.l};
+        return;
+    }
+    cpu->C.l = cpu->S.l;
+}
+
 const instr_data instructions[] = {
     {s, 7, 2, BRK},
     {dxi, 6, 2, ORA},
@@ -446,6 +454,23 @@ const instr_data instructions[] = {
     {a, 4, 3, AND},
     {a, 6, 3, ROL},
     {al, 5, 4, AND},
+
+    {r, 2, 2, BMI},
+    {diy, 5, 2, AND},
+    {di, 5, 2, AND},
+    {dsiy, 7, 2, AND},
+    {dx, 4, 2, BIT},
+    {dx, 4, 2, AND},
+    {dx, 6, 2, ROL},
+    {dliy, 6, 2, AND},
+    {nil, 2, 1, SEC},
+    {ay, 4, 3, AND},
+    {nil, 2, 1, DECA},
+    {nil, 2, 1, TSC},
+    {ax, 4, 3, BIT},
+    {ax, 4, 3, AND},
+    {ax, 7, 3, ROL},
+    {ax, 5, 4, AND},
     /*
     {},
     {},
@@ -469,7 +494,7 @@ const instr_data instructions[] = {
 /*run instruction
 returns 0 for success; 1: somehow illegal opcode; 2:...*/
 char run_instr_cpu(CPUState* cpu){
-    char instr = mem_fetch(cpu, (address){cpu->PBR, cpu->PC});
+    byte instr = mem_fetch(cpu, (address){cpu->PBR, cpu->PC});
     inc_PC(cpu);
     instr_data instruction = instructions[instr];
     address addr = instruction.addr_func(cpu);
@@ -481,7 +506,7 @@ char run_instr_cpu(CPUState* cpu){
 
 void cycle_cpu(CPUState* cpu){
     run_instr_cpu(cpu);
-    while(cpu->current_time < cpu->expected_time){
+    while(cpu->current_time < cpu->expected_time){//if ahead, wait
         cpu->current_time = RTC_GetTicks();
     }
 }
