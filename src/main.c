@@ -25,6 +25,11 @@ int main(void) {
         //game loop
         while (1) {
             keyupdate();
+
+            PrintXY(1, 2, "  running...", 0, 0);
+
+            put_disp();
+
             if (keydownlast(KEY_CTRL_MENU)) break;
 
             cycle_cpu(&cpu);

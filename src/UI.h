@@ -85,6 +85,8 @@ int map_key_ui(char* key_name){
 Rom main_menu_ui(int keybinds[12]){
     while (1){
         keyupdate();
+        put_disp();
+        PrintXY(1, 2, "  Main menu", 0, 0);
         if (keydownlast(KEY_SHIFT_OPTN)){
             //Settings
         }
@@ -102,6 +104,9 @@ Rom main_menu_ui(int keybinds[12]){
             keybinds[10] = map_key_ui("START");
             keybinds[11] = map_key_ui("SELECT");
         }
+        if (keydownlast(KEY_CTRL_EXE)){
+            return test_rom;
+        }
     }
     return test_rom;
 }
@@ -109,9 +114,10 @@ Rom main_menu_ui(int keybinds[12]){
 void pause_menu_ui(CPUState* cpu){
     while (1){
         keyupdate();
+        put_disp();
 
         PrintXY(1, 1, "  Paused", 0, TEXT_COLOR_BLACK);
-        
+
         if(keydownlast(KEY_CTRL_EXIT)){
             break;
         }

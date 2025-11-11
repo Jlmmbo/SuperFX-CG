@@ -3,6 +3,8 @@
 
 #define NON_BLOCK_DMA 1
 
+void put_disp(void);
+
 const unsigned short* keyboard_register = (unsigned short*)0xA44B0000;
 unsigned short lastkey[8];
 unsigned short holdkey[8];
