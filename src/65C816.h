@@ -77,13 +77,15 @@ typedef struct {
 }instr_data;
 
 void push(CPUState* cpu, byte val){
-    cpu->mem[0][cpu->S.h * 256 + cpu->S.l] = val;
+    if (cpu->P.M == 0) cpu->mem[0][cpu->S.h * 256 + cpu->S.l] = val;
+    else cpu->mem[0][cpu->S.l] = val;
     cpu->S = sub_2_1(cpu->S, 0x01);//descending stack
 }
 
-void pull(CPUState* cpu, byte val){
-    cpu->mem[0][cpu->S.h * 256 + cpu->S.l] = val;
-    cpu->S = add_2_1(cpu->S, 0x01);
+byte pull(CPUState* cpu){
+    cpu->S = add_2_1(cpu->S, 0x01);//??????????? if in emulation mode, does S.h decrement on page wrap?
+    if (cpu->P.M == 0) return cpu->mem[0][cpu->S.h * 256 + cpu->S.l];
+    return cpu->mem[0][cpu->S.l];
 }
 
 address inc_addr(address addr){
@@ -261,7 +263,7 @@ address ds(CPUState* cpu){
 address dsiy(CPUState* cpu){
     return add_addr((address){cpu->DBR, cpu->S.h * 256 + cpu->S.l + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
 }
-
+//BReaK
 void BRK(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
         push(cpu, cpu->PBR);
@@ -281,7 +283,7 @@ void BRK(CPUState* cpu, address addr){
     cpu->P.D = 0;
     cpu->P.X = 1;
 }
-
+//OR with Accumulator
 void ORA(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
         uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
@@ -295,7 +297,7 @@ void ORA(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
-
+//CO-Processor
 void COP(CPUState* cpu, address addr){
      if(cpu->P.M == 0){//16-bit
         push(cpu, cpu->PBR);
@@ -307,17 +309,16 @@ void COP(CPUState* cpu, address addr){
         cpu->P.D = 0;
      }
 }
-
+//Test and Set Bits
 void TSB(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
-        two_bytes ans = separate_bytes(((cpu->C.h << 8) + cpu->C.l) | ((mem_fetch(cpu, inc_addr(addr)) << 8) + mem_fetch(cpu, addr)));
-        mem_set(cpu, ans.l, addr);
-        mem_set(cpu, ans.h, inc_addr(addr));
+        mem_set(cpu, mem_fetch(cpu, addr) | cpu->C.l, addr);
+        mem_set(cpu, mem_fetch(cpu, inc_addr(addr)) | cpu->C.h, inc_addr(addr));
         return;
     }
     mem_set(cpu, cpu->C.l | mem_fetch(cpu, addr), addr);
 }
-
+//Arithmetic Shift Left
 void ASL(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
         two_bytes val = (two_bytes){mem_fetch(cpu, addr), mem_fetch(cpu, inc_addr(addr))};
@@ -337,12 +338,12 @@ void ASL(CPUState* cpu, address addr){
     cpu->P.Z = (val == 0);
 
 }
-
+//PusH P
 void PHP(CPUState* cpu, address addr){
     cpu->P.X = 1;//idk if break flag is set
     push(cpu, status_to_byte(cpu->P));
 }
-
+//Arithmetic Shift Left Accumulator
 void ASLA(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
         cpu->P.E = cpu->C.h >> 7;//highest bit goes into carry
@@ -357,7 +358,7 @@ void ASLA(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
-
+//PusH D
 void PHD(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
         push(cpu, cpu->D / 256);
@@ -366,7 +367,7 @@ void PHD(CPUState* cpu, address addr){
     }
     push(cpu, cpu->D % 256);
 }
-
+//Branch if PLus
 void BPL(CPUState* cpu, address addr){
     char offset = mem_fetch(cpu, addr);
     if(cpu->P.N == 0){
@@ -375,15 +376,22 @@ void BPL(CPUState* cpu, address addr){
     }
     cpu->PC++;
 }
-
+//Test and Reset Bits
 void TRB(CPUState* cpu, address addr){
-    
+    if (cpu->P.M == 0){//16-bit
+        two_bytes val = (two_bytes){mem_fetch(cpu, inc_addr(addr)), mem_fetch(cpu, addr)};
+        mem_set(cpu, (val.l ^ cpu->C.l) & val.l, addr);//Set bits in C = clear bits in mem
+        mem_set(cpu, (val.h ^ cpu->C.h) & val.h, inc_addr(addr));//somehow (val XOR C) & val does this
+        return;
+    }
+    byte val = mem_fetch(cpu, addr);
+    mem_set(cpu, (val ^ cpu->C.l) & val, addr);
 }
-
+//CLear Carry
 void CLC(CPUState* cpu, address addr){
     cpu->P.E = 0;
 }
-
+//INCrement Accumulator
 void INCA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
         cpu->C = add_2_1(cpu->C, 0x01);
@@ -391,7 +399,7 @@ void INCA(CPUState* cpu, address addr){
     }
     cpu->C.l++;
 }
-
+//Transfer aCcumulator to Stack
 void TCS(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
         cpu->S = (two_bytes){cpu->C.h, cpu->C.l};
@@ -399,13 +407,15 @@ void TCS(CPUState* cpu, address addr){
     }
     cpu->S.l = cpu->C.l;
 }
-
+//Jump to SubRoutine
 void JSR(CPUState* cpu, address addr){
-
+    push(cpu, cpu->PC / 256);
+    push(cpu, cpu->PC % 256);
+    cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr));
 }
-
+//AND with Accumulator
 void AND(CPUState* cpu, address addr){
-    if(cpu->P.M){//16-bit
+    if(cpu->P.M == 0){//16-bit
         uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
         cpu->C = separate_bytes(v & bytes_to_int(cpu->C.h, cpu->C.l));
         cpu->P.N = cpu->C.h >> 7;
@@ -417,14 +427,17 @@ void AND(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
-
-
+//Jump to Subroutine Long
 void JSL(CPUState* cpu, address addr){
-
+    push(cpu, cpu->PBR);
+    push(cpu, cpu->PC / 256);
+    push(cpu, cpu->PC % 256 + 3);
+    cpu->PBR = mem_fetch(cpu, inc_addr(inc_addr(addr)));
+    cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr));
 }
-
+//test BITs
 void BIT(CPUState* cpu, address addr){
-    if(cpu->P.M){//16-bit
+    if(cpu->P.M == 0){//16-bit
         uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
         two_bytes ans = (two_bytes){cpu->C.h & (v >> 8), cpu->C.l & (v & 0x00FF)}; 
         cpu->P.N = ans.h >> 7;
@@ -438,23 +451,58 @@ void BIT(CPUState* cpu, address addr){
     cpu->P.V = (ans >> 6) & 0b01;//P.V = bit 6
     cpu->P.Z = ans == 0;
 }
-
+//ROtate Left
 void ROL(CPUState* cpu, address addr){
-
+    if (cpu->P.M == 0){
+        two_bytes val = (two_bytes){mem_fetch(cpu, inc_addr(addr)), mem_fetch(cpu, addr)};
+        byte old_carry = cpu->P.E;
+        cpu->P.E = val.h >> 7;
+        val = (two_bytes){(val.h << 1) + (val.l >> 7), (val.l << 1) + old_carry};
+        cpu->P.N = val.h >> 7;
+        cpu->P.Z = (val.h == 0) && (val.l == 0);
+        mem_set(cpu, val.l, addr);
+        mem_set(cpu, val.h, inc_addr(addr));
+        return;
+    }
+    byte val = mem_fetch(cpu, addr);
+    byte old_carry = cpu->P.E;
+    cpu->P.E = val >> 7;
+    val = (val << 1) + old_carry;
+    cpu->P.N = val >> 7;
+    cpu->P.Z = val == 0;
+    mem_set(cpu, val, addr);
 }
-
+//PuLl P
 void PLP(CPUState* cpu, address addr){
-
+    byte P = pull(cpu);
+    if (cpu->P.M == 0){
+        cpu->P = byte_to_status(P);
+        return;
+    }
+    P |= 0b00100000; //set emulation bit
+    cpu->P = byte_to_status(P);
 }
-
+//ROtate Left Accumulator
 void ROLA(CPUState* cpu, address addr){
-
+    if (cpu->P.M == 0){
+        byte old_carry = cpu->P.E;
+        cpu->P.E = cpu->C.h >> 7;
+        cpu->C = (two_bytes){(cpu->C.h << 1) + (cpu->C.l >> 7), (cpu->C.l << 1) + old_carry};
+        cpu->P.N = cpu->C.h >> 7;
+        cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+        return;
+    }
+    byte old_carry = cpu->P.E;
+    cpu->P.E = cpu->C.l >> 7;
+    cpu->C.l = (cpu->C.l << 1) + old_carry;
+    cpu->P.N = cpu->C.l >> 7;
+    cpu->P.Z = cpu->C.l == 0;
 }
-
+//PuLl D
 void PLD(CPUState* cpu, address addr){
-
+    cpu->D = pull(cpu) + pull(cpu) * 256; // nice and simple
 }
-
+//Branch if MInus
 void BMI(CPUState* cpu, address addr){
     char offset = mem_fetch(cpu, addr);
     if(cpu->P.N == 1){
@@ -463,11 +511,11 @@ void BMI(CPUState* cpu, address addr){
     }
     cpu->PC++;
 }
-
+//SEt Carry flag
 void SEC(CPUState* cpu, address addr){
     cpu->P.E = 1;
 }
-
+//Decrement Accumulator
 void DECA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
         cpu->C = sub_2_1(cpu->C, 0x01);
@@ -475,7 +523,7 @@ void DECA(CPUState* cpu, address addr){
     }
     cpu->C.l--;
 }
-
+//Transfer Stack to aCcumulator
 void TSC(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
         cpu->C = (two_bytes){cpu->S.h, cpu->S.l};
