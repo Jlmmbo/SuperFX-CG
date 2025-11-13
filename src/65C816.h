@@ -2,12 +2,12 @@
 //~62 home ticks per 65c816 tick
 
 
-typedef struct {
+typedef struct address{
     byte bank;
     uint16_t addr;
 }address;
 
-typedef struct{
+typedef struct StatusReg{
     char N:1;//bit 7: Negative
     char V:1;//bit 6: oVerflow
     char M:1;//bit 5: Memory/accumulator size (0: 16-bit, 1: 8-bit)
@@ -50,7 +50,7 @@ void status_apply_mask(StatusReg* P, byte set_bits, byte clear_bits){
     *P = byte_to_status(P_byte);
 }
 
-typedef struct {
+typedef struct CPUState{
     uint16_t X, Y;//index registers
     uint16_t D;//direct register
     two_bytes C;//accumulator
@@ -64,12 +64,12 @@ typedef struct {
     int current_time;
 }CPUState;
 
-typedef struct {
+typedef struct Rom{
     byte* raw;
     long int size:24;//long to ensure at least 24 bits reg. int may only be 16
 }Rom;
 
-typedef struct {
+typedef struct instr_data{
     address (*addr_func)(CPUState*);//function to calculate effective address
     byte cycle_count;
     byte read_bytes;//num of bytes read, includes opcode
@@ -499,7 +499,7 @@ void ROLA(CPUState* cpu, address addr){
 }
 //PuLl D
 void PLD(CPUState* cpu, address addr){
-    cpu->D = pull(cpu) + pull(cpu) * 256; // nice and simple
+    cpu->D = pull(cpu) + pull(cpu) * 256;
 }
 //Branch if MInus
 void BMI(CPUState* cpu, address addr){
@@ -532,8 +532,14 @@ void TSC(CPUState* cpu, address addr){
 }
 //ReTurn from Interrupt
 void RTI(CPUState* cpu, address addr){
-
+    byte P = pull(cpu);
+    cpu->P = byte_to_status(P);
+    cpu->PC = pull(cpu) + pull(cpu) * 256;
+    if (cpu->P.M == 0){//16-bit
+        cpu->PBR = pull(cpu);
+    }
 }
+
 //Exclusive OR with accumulator
 void EOR(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
@@ -554,7 +560,14 @@ void WDM(CPUState* cpu, address addr){
 }
 //MoVe block Positive
 void MVP(CPUState* cpu, address addr){
-    
+    byte dest_bank = mem_fetch(cpu, addr);
+    byte src_bank = mem_fetch(cpu, inc_addr(addr));
+    while (!((cpu->C.h == 0xff) && (cpu->C.l == 0xff))){
+        mem_set(cpu, mem_fetch(cpu, (address){src_bank, cpu->X}), (address){dest_bank, cpu->Y});
+        cpu->X--;
+        cpu->Y--;
+        cpu->C = sub_2_1(cpu->C, 0x01);
+    }
 }
 //Logical Shift Right
 void LSR(CPUState* cpu, address addr){
@@ -607,7 +620,39 @@ void JMPL(CPUState* cpu, address addr){
     cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
     cpu->PBR = mem_fetch(cpu, inc_addr(inc_addr(addr)));
 }
-
+//Branch if oVerflow Clear
+void BVC(CPUState* cpu, address addr){
+    char offset = mem_fetch(cpu, addr);
+    if(cpu->P.V == 0){
+        cpu->PC = cpu->PC + (offset - 128);
+        return;
+    }
+    cpu->PC++;
+}
+//MoVe block Negative
+void MVN(CPUState* cpu, address addr){
+    byte dest_bank = mem_fetch(cpu, addr);
+    byte src_bank = mem_fetch(cpu, inc_addr(addr));
+    while (!((cpu->C.h == 0xff) && (cpu->C.l == 0xff))){
+        mem_set(cpu, mem_fetch(cpu, (address){src_bank, cpu->X}), (address){dest_bank, cpu->Y});
+        cpu->X++;
+        cpu->Y++;
+        cpu->C = sub_2_1(cpu->C, 0x01);
+    }
+}
+//CLear Interrupt flag
+void CLI(CPUState* cpu, address addr){
+    cpu->P.I = 0;
+}
+//PusH Y
+void PHY(CPUState* cpu, address addr){
+    push(cpu, cpu->Y / 256);
+    push(cpu, cpu->Y % 256);
+}
+//Transdfer aCcumulator to D
+void TCD(CPUState* cpu, address addr){
+    cpu->D = cpu->C.h * 256 + cpu->C.l;
+}
 const instr_data instructions[] = {
     {s, 7, 2, BRK},
     {dxi, 6, 2, ORA},
@@ -694,6 +739,22 @@ const instr_data instructions[] = {
     {a, 6, 3, LSR},
     {al, 5, 4, EOR},
 
+    {r, 2, 2, BVC},
+    {diy, 5, 2, EOR},
+    {di, 5, 2, EOR},
+    {dsiy, 7, 2, EOR},
+    {xyc, 7, 3, MVN},
+    {dx, 4, 2, EOR},
+    {dx, 6, 2, LSR},
+    {dliy, 6, 2, EOR},
+    {nil, 2, 1, CLI},
+    {ay, 4, 3, EOR},
+    {s, 3, 1, PHY},
+    {nil, 2, 1, TCD},
+    {al, 4, 4, JMPL},
+    {ax, 4, 3, EOR},
+    {ax, 7, 3, LSR},
+    {alx, 5, 4, EOR},
     /*
     {},
     {},
