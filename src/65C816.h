@@ -336,7 +336,6 @@ void ASL(CPUState* cpu, address addr){
     mem_set(cpu, val, addr);
     cpu->P.N = val >> 7;
     cpu->P.Z = (val == 0);
-
 }
 //PusH P
 void PHP(CPUState* cpu, address addr){
@@ -531,6 +530,83 @@ void TSC(CPUState* cpu, address addr){
     }
     cpu->C.l = cpu->S.l;
 }
+//ReTurn from Interrupt
+void RTI(CPUState* cpu, address addr){
+
+}
+//Exclusive OR with accumulator
+void EOR(CPUState* cpu, address addr){
+    if(cpu->P.M == 0){//16-bit
+        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        cpu->C = separate_bytes(v ^ bytes_to_int(cpu->C.h, cpu->C.l));
+        cpu->P.N = cpu->C.h >> 7;
+        cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+        return;
+    }
+    byte v = mem_fetch(cpu, addr);
+    cpu->C.l = cpu->C.l ^ v;
+    cpu->P.N = cpu->C.l >> 7;
+    cpu->P.Z = cpu->C.l == 0;
+}
+//William David Mensch (2 byte NOP)
+void WDM(CPUState* cpu, address addr){
+    //
+}
+//MoVe block Positive
+void MVP(CPUState* cpu, address addr){
+    
+}
+//Logical Shift Right
+void LSR(CPUState* cpu, address addr){
+    if (cpu->P.M == 0){
+        two_bytes val = (two_bytes){mem_fetch(cpu, addr), mem_fetch(cpu, inc_addr(addr))};
+        val = (two_bytes){val.h >> 1 + cpu->P.E * 128, val.l >> 1 + val.h & 0b00000001};//multiply by 2
+        cpu->P.E = val.l & 0b00000001;//lowest bit goes into carry
+        mem_set(cpu, val.h, addr);
+        mem_set(cpu, val.l, inc_addr(addr));
+        cpu->P.N = val.h >> 7; //highest bit is sign bit
+        cpu->P.Z = (val.h == 0) && (val.l == 0);
+        return;
+    }
+    byte val = mem_fetch(cpu, addr);
+    val = val >> 1;
+    cpu->P.E = val & 0b00000001;
+    mem_set(cpu, val, addr);
+    cpu->P.N = val >> 7;
+    cpu->P.Z = (val == 0);
+}
+//PusH Accumulator
+void PHA(CPUState* cpu, address addr){
+    push(cpu, cpu->C.h);
+    push(cpu, cpu->C.l);
+}
+//Logical Shift Right Accumulator
+void LSRA(CPUState* cpu, address addr){
+    if (cpu->P.M == 0){
+        cpu->C = (two_bytes){cpu->C.h >> 1 + cpu->P.E * 128, cpu->C.l >> 1 + cpu->C.h & 0b00000001};//multiply by 2
+        cpu->P.E = cpu->C.l & 0b00000001;//lowest bit goes into carry
+        cpu->P.N = cpu->C.h >> 7; //highest bit is sign bit
+        cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+        return;
+    }
+    cpu->C.l = cpu->C.l >> 1;
+    cpu->P.E = cpu->C.l & 0b00000001;
+    cpu->P.N = cpu->C.l >> 7;
+    cpu->P.Z = (cpu->C.l == 0);
+}
+//PusH program BanK
+void PHK(CPUState* cpu, address addr){
+    push(cpu, cpu->PBR);
+}
+//JuMP
+void JMP(CPUState* cpu, address addr){
+    cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+}
+//JMP Long addr
+void JMPL(CPUState* cpu, address addr){
+    cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+    cpu->PBR = mem_fetch(cpu, inc_addr(inc_addr(addr)));
+}
 
 const instr_data instructions[] = {
     {s, 7, 2, BRK},
@@ -600,6 +676,24 @@ const instr_data instructions[] = {
     {ax, 4, 3, AND},
     {ax, 7, 3, ROL},
     {ax, 5, 4, AND},
+
+    {s, 7, 1, RTI},
+    {dxi, 6, 2, EOR},
+    {nil, 2, 2, WDM},
+    {ds, 4, 2, EOR},
+    {xyc, 7, 3, MVP},
+    {d, 3, 2, EOR},
+    {d, 5, 2, LSR},
+    {dli, 6, 2, EOR},
+    {s, 3, 1, PHA},
+    {imm, 2, 2, EOR},
+    {nil, 2, 1, LSRA},
+    {s, 3, 1, PHK},
+    {a, 3, 3, JMP},
+    {a, 4, 3, EOR},
+    {a, 6, 3, LSR},
+    {al, 5, 4, EOR},
+
     /*
     {},
     {},
