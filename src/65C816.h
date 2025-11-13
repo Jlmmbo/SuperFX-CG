@@ -560,7 +560,7 @@ void MVP(CPUState* cpu, address addr){
 void LSR(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
         two_bytes val = (two_bytes){mem_fetch(cpu, addr), mem_fetch(cpu, inc_addr(addr))};
-        val = (two_bytes){val.h >> 1 + cpu->P.E * 128, val.l >> 1 + val.h & 0b00000001};//multiply by 2
+        val = (two_bytes){(val.h >> 1) + cpu->P.E * 128, (val.l >> 1) + (val.h & 0b00000001)};
         cpu->P.E = val.l & 0b00000001;//lowest bit goes into carry
         mem_set(cpu, val.h, addr);
         mem_set(cpu, val.l, inc_addr(addr));
@@ -583,7 +583,7 @@ void PHA(CPUState* cpu, address addr){
 //Logical Shift Right Accumulator
 void LSRA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
-        cpu->C = (two_bytes){cpu->C.h >> 1 + cpu->P.E * 128, cpu->C.l >> 1 + cpu->C.h & 0b00000001};//multiply by 2
+        cpu->C = (two_bytes){(cpu->C.h >> 1) + cpu->P.E * 128, (cpu->C.l >> 1) + (cpu->C.h & 0b00000001)};
         cpu->P.E = cpu->C.l & 0b00000001;//lowest bit goes into carry
         cpu->P.N = cpu->C.h >> 7; //highest bit is sign bit
         cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
