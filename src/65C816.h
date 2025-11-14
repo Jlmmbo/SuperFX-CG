@@ -624,11 +624,11 @@ void MVP(CPUState* cpu, address addr){
 //Logical Shift Right
 void LSR(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
-        two_bytes val = (two_bytes){mem_fetch(cpu, addr), mem_fetch(cpu, inc_addr(addr))};
+        two_bytes val = (two_bytes){mem_fetch(cpu, inc_addr(addr)), mem_fetch(cpu, addr)};
         val = (two_bytes){(val.h >> 1) + cpu->P.E * 128, (val.l >> 1) + (val.h & 0b00000001)};
         cpu->P.E = val.l & 0b00000001;//lowest bit goes into carry
-        mem_set(cpu, val.h, addr);
-        mem_set(cpu, val.l, inc_addr(addr));
+        mem_set(cpu, val.l, addr);
+        mem_set(cpu, val.h, inc_addr(addr));
         cpu->P.N = val.h >> 7; //highest bit is sign bit
         cpu->P.Z = (val.h == 0) && (val.l == 0);
         return;
@@ -745,28 +745,55 @@ void PER(CPUState* cpu, address addr){
 
 //STore Zero
 void STZ(CPUState* cpu, address addr){
-    
+    mem_set(cpu, 0x00, addr);
+    if(cpu->P.M == 0) mem_set(cpu, 0x00, inc_addr(addr));
 }
 
 //ROtate Right
 void ROR(CPUState* cpu, address addr){
-    
+    if(cpu->P.M == 0){//16-bit
+        two_bytes val = (two_bytes){mem_fetch(cpu, inc_addr(addr)), mem_fetch(cpu, addr)};
+        byte old_carry = cpu->P.E;
+        cpu->P.E = val.l & 0b00000001;
+        val = (two_bytes){(val.h >> 1) + old_carry * 128, (val.l >> 1) + (val.h & 0b00000001)};
+        mem_set(cpu, val.l, addr);
+        mem_set(cpu, val.h, inc_addr(addr));
+        return;
+    }
+    byte val = mem_fetch(cpu, addr);
+    byte old_carry = cpu->P.E;
+    cpu->P.E = val & 0b00000001;
+    val = (val >> 1) + old_carry * 128;
+    mem_set(cpu, val, addr);
 }
 
 //PuLl Accumulator
 void PLA(CPUState* cpu, address addr){
-    
+    cpu->C.l = pull(cpu);
+    cpu->C.h = pull(cpu);
+    cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+    cpu->P.N = cpu->C.h >> 7;
 }
 
 //ROtate Right Accumulator
 void RORA(CPUState* cpu, address addr){
-    
+    if(cpu->P.M == 0){//16-bit
+        byte old_carry = cpu->P.E;
+        cpu->P.E = cpu->C.l & 0b00000001;
+        cpu->C = (two_bytes){(cpu->C.h >> 1) + old_carry * 128, (cpu->C.l >> 1) + (cpu->C.h & 0b00000001)};
+        return;
+    }
+    byte old_carry = cpu->P.E;
+    cpu->P.E = cpu->C.l & 0b00000001;
+    cpu->C.l = (cpu->C.l >> 1) + old_carry * 128;
 }
 
 //ReTurn from subroutine Long
 void RTL(CPUState* cpu, address addr){
-    
+    cpu->PC = pull(cpu) + pull(cpu) * 256 + 1;
+    cpu->PBR = pull(cpu);
 }
+
 const instr_data instructions[] = {
     {s, 7, 2, BRK},
     {dxi, 6, 2, ORA},
@@ -886,6 +913,7 @@ const instr_data instructions[] = {
     {a, 4, 3, ADC},
     {a, 6, 3, ROR},
     {al, 5, 4, ADC},
+    
     /*
     {},
     {},
