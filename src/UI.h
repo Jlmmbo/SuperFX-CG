@@ -73,6 +73,99 @@ void display_text(char* text, char color, unsigned char font_size, int x, int y)
     PrintCXY(x, y, text, TEXT_MODE_NORMAL, -1, TEXT_COLOR_BLACK, TEXT_COLOR_WHITE, 1, 0);
 }
 
+void CopySprite(color_t* sprite, int x, int y, int width, int height) {
+   color_t* VRAM = (color_t*)GetVRAMAddress();
+   VRAM += LCD_WIDTH_PX*y + x;
+   for(int j=y; j<y+height; j++) {
+      for(int i=x; i<x+width; i++) {
+         *(VRAM++) = *(sprite++);
+      }
+      VRAM += LCD_WIDTH_PX-width;
+   }
+} 
+
+void CopySpriteMaskedAlpha(const void*datar, int x, int y, int width, int height, color_t maskcolor, int alpha) { 
+   color_t*data = (color_t*) datar; 
+   color_t* VRAM = (color_t*)GetVRAMAddress(); 
+   VRAM += LCD_WIDTH_PX*y + x; 
+   alpha %= 32; 
+   for(int j=y; j<y+height; j++) { 
+      for(int i=x; i<x+width;  i++) { 
+         if (*(data) != maskcolor) { 
+         *(VRAM) = (color_t)((((int)(*data & 0xf81f) * alpha + (int)(*VRAM & 0xf81f) * (32-alpha) + 0x8010) >> 5) & 0xf81f) | 
+                (color_t)((((int)(*data & 0x07e0) * alpha + (int)(*VRAM & 0x07e0) * (32-alpha) + 0x0400) >> 6) & 0x07e0); 
+           VRAM++; data++; 
+         } else { VRAM++; data++; } 
+      }
+      VRAM += LCD_WIDTH_PX-width; 
+   } 
+}
+
+void CopySpriteNbit(const unsigned char* data, int x, int y, int width, int height, const color_t* palette, unsigned int bitwidth) {
+   color_t* VRAM = (color_t*) GetVRAMAddress();
+   VRAM += (LCD_WIDTH_PX*y + x);
+   int offset = 0;
+   unsigned char buf;
+   for(int j=y; j<y+height; j++) {
+      int availbits = 0;
+      for(int i=x; i<x+width;  i++) {
+         if (!availbits) {
+            buf = data[offset++];
+            availbits = 8;
+         }
+         color_t this = ((color_t)buf>>(8-bitwidth));
+         *VRAM = palette[(color_t)this];
+         VRAM++;
+         buf<<=bitwidth;
+         availbits-=bitwidth;
+      }
+      VRAM += (LCD_WIDTH_PX-width);
+   }
+}
+
+void CopySpriteNbitMasked(const unsigned char* data, int x, int y, int width, int height, const color_t* palette, color_t maskColor, unsigned int bitwidth)  
+ {
+   color_t* VRAM = (color_t*) GetVRAMAddress();
+
+   VRAM += (LCD_WIDTH_PX * y + x);
+
+   int offset = 0;
+
+   unsigned char buf;
+
+   for(int j=y; j<y+height; j++) {
+
+      int availbits = 0;
+
+      for(int i=x; i<x+width;  i++) {
+
+         if (!availbits) {
+            buf = data[offset++];
+            availbits = 8;
+         }
+
+         color_t color = palette[(color_t)buf>>(8-bitwidth)];
+         if(color != maskColor) {
+            *VRAM = color;
+         }
+         VRAM++;
+         buf<<=bitwidth;
+         availbits-=bitwidth;
+      }
+      VRAM += (LCD_WIDTH_PX-width);
+   }
+}
+
+void fillArea(unsigned x, unsigned y, unsigned w, unsigned h, unsigned short col){
+    unsigned short *s = (unsigned short *)GetVRAMAddress();
+    s += (y * 384) + x;
+    while(h--){
+        unsigned w2 = w;
+        while(w2--)
+            *s++ = col;
+        s += 384 - w;
+    }
+}
 
 int map_key_ui(char* key_name){
     int key = 0;

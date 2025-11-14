@@ -160,36 +160,43 @@ char mem_set(CPUState* cpu, byte value, address addr){
     return 0;
 }
 
+
 //absolute
 address a(CPUState* cpu){
     address addr = (address){cpu->PBR, cpu->PC};
     return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256};
 }
+
 //absolute indexed indirect
 address axi(CPUState* cpu){
     address addr = (address){cpu->PBR, cpu->PC};
     return (address){0x00, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256 + cpu->X};
 }
+
 //absolute indexed X
 address ax(CPUState* cpu){
     address addr = (address){cpu->PBR, cpu->PC};
     return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256 + cpu->X};
 }
+
 //absolute indexed Y
 address ay(CPUState* cpu){
     address addr = (address){cpu->PBR, cpu->PC};
     return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256 + cpu->Y};
 }
+
 //absolute indirect
 address ai(CPUState* cpu){
     address addr = (address){cpu->PBR, cpu->PC};
     return (address){0x00, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256};
 }
+
 //absolute long indexed
 address alx(CPUState* cpu){
     address addr = (address){cpu->PBR, cpu->PC};
     return (address){mem_fetch(cpu, inc_addr(inc_addr(addr))), mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256 + cpu->X};
 }
+
 //absolute long
 address al(CPUState* cpu){
     address addr = (address){cpu->PBR, cpu->PC};
@@ -199,70 +206,87 @@ address al(CPUState* cpu){
 /*address A(CPUState* cpu){
     return (address){cpu->PBR, cpu->PC};
 }*/
+
 //block move
 address xyc(CPUState* cpu){
     return (address){cpu->DBR, mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
 }
+
 //direct indexed indirect
 address dxi(CPUState* cpu){
     return (address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->X};
 }
+
 //direct indexed X
 address dx(CPUState* cpu){
     return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->X};
 }
+
 //direct indexed Y
 address dy(CPUState* cpu){
     return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->Y};
 }
+
 //direct indirect indexed
 address diy(CPUState* cpu){
     return add_addr((address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
 }
+
 //direct long indirecte indexed
 address dliy(CPUState* cpu){
     return add_addr((address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
 }
+
 //direct long indirect
 address dli(CPUState* cpu){
     return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
 }
+
 //direct indirect
 address di(CPUState* cpu){
     return (address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
 }
+
 //direct
 address d(CPUState* cpu){
     return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
 }
+
 // immediate
 address imm(CPUState* cpu){
     return (address){cpu->PBR, cpu->PC};
 }
+
 //no address
 address nil(CPUState* cpu){
     return (address){0, 0};
 }
+
 //relative long
 address rl(CPUState* cpu){
     return (address){cpu->PBR, cpu->PC};//////////////////////////////////////////////////////////////////////////////
 }
+
 //relative
 address r(CPUState* cpu){
     return (address){cpu->PBR, cpu->PC};//////////////////////////////////////////////////////////////////////////////
 }
+
 //stack
 address s(CPUState* cpu){
     return (address){0x00, cpu->S.h * 256 + cpu->S.l};
 }
+
 //direct stack
 address ds(CPUState* cpu){
     return add_addr((address){0x00, cpu->S.h * 256 + cpu->S.l}, mem_fetch(cpu, (address){cpu->PBR, cpu->PC}));
 }
+
 //direct stack indirect indexed
 address dsiy(CPUState* cpu){
     return add_addr((address){cpu->DBR, cpu->S.h * 256 + cpu->S.l + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
 }
+
 //BReaK
 void BRK(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
@@ -283,6 +307,7 @@ void BRK(CPUState* cpu, address addr){
     cpu->P.D = 0;
     cpu->P.X = 1;
 }
+
 //OR with Accumulator
 void ORA(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
@@ -297,6 +322,7 @@ void ORA(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
+
 //CO-Processor
 void COP(CPUState* cpu, address addr){
      if(cpu->P.M == 0){//16-bit
@@ -309,6 +335,7 @@ void COP(CPUState* cpu, address addr){
         cpu->P.D = 0;
      }
 }
+
 //Test and Set Bits
 void TSB(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
@@ -318,6 +345,7 @@ void TSB(CPUState* cpu, address addr){
     }
     mem_set(cpu, cpu->C.l | mem_fetch(cpu, addr), addr);
 }
+
 //Arithmetic Shift Left
 void ASL(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
@@ -337,11 +365,13 @@ void ASL(CPUState* cpu, address addr){
     cpu->P.N = val >> 7;
     cpu->P.Z = (val == 0);
 }
+
 //PusH P
 void PHP(CPUState* cpu, address addr){
     cpu->P.X = 1;//idk if break flag is set
     push(cpu, status_to_byte(cpu->P));
 }
+
 //Arithmetic Shift Left Accumulator
 void ASLA(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
@@ -357,6 +387,7 @@ void ASLA(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
+
 //PusH D
 void PHD(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
@@ -366,6 +397,7 @@ void PHD(CPUState* cpu, address addr){
     }
     push(cpu, cpu->D % 256);
 }
+
 //Branch if PLus
 void BPL(CPUState* cpu, address addr){
     char offset = mem_fetch(cpu, addr);
@@ -375,6 +407,7 @@ void BPL(CPUState* cpu, address addr){
     }
     cpu->PC++;
 }
+
 //Test and Reset Bits
 void TRB(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
@@ -386,10 +419,12 @@ void TRB(CPUState* cpu, address addr){
     byte val = mem_fetch(cpu, addr);
     mem_set(cpu, (val ^ cpu->C.l) & val, addr);
 }
+
 //CLear Carry
 void CLC(CPUState* cpu, address addr){
     cpu->P.E = 0;
 }
+
 //INCrement Accumulator
 void INCA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
@@ -398,6 +433,7 @@ void INCA(CPUState* cpu, address addr){
     }
     cpu->C.l++;
 }
+
 //Transfer aCcumulator to Stack
 void TCS(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
@@ -406,12 +442,14 @@ void TCS(CPUState* cpu, address addr){
     }
     cpu->S.l = cpu->C.l;
 }
+
 //Jump to SubRoutine
 void JSR(CPUState* cpu, address addr){
     push(cpu, cpu->PC / 256);
     push(cpu, cpu->PC % 256);
     cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr));
 }
+
 //AND with Accumulator
 void AND(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
@@ -426,6 +464,7 @@ void AND(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
+
 //Jump to Subroutine Long
 void JSL(CPUState* cpu, address addr){
     push(cpu, cpu->PBR);
@@ -434,6 +473,7 @@ void JSL(CPUState* cpu, address addr){
     cpu->PBR = mem_fetch(cpu, inc_addr(inc_addr(addr)));
     cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr));
 }
+
 //test BITs
 void BIT(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
@@ -450,6 +490,7 @@ void BIT(CPUState* cpu, address addr){
     cpu->P.V = (ans >> 6) & 0b01;//P.V = bit 6
     cpu->P.Z = ans == 0;
 }
+
 //ROtate Left
 void ROL(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
@@ -471,6 +512,7 @@ void ROL(CPUState* cpu, address addr){
     cpu->P.Z = val == 0;
     mem_set(cpu, val, addr);
 }
+
 //PuLl P
 void PLP(CPUState* cpu, address addr){
     byte P = pull(cpu);
@@ -481,6 +523,7 @@ void PLP(CPUState* cpu, address addr){
     P |= 0b00100000; //set emulation bit
     cpu->P = byte_to_status(P);
 }
+
 //ROtate Left Accumulator
 void ROLA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
@@ -497,10 +540,12 @@ void ROLA(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
+
 //PuLl D
 void PLD(CPUState* cpu, address addr){
     cpu->D = pull(cpu) + pull(cpu) * 256;
 }
+
 //Branch if MInus
 void BMI(CPUState* cpu, address addr){
     char offset = mem_fetch(cpu, addr);
@@ -510,10 +555,12 @@ void BMI(CPUState* cpu, address addr){
     }
     cpu->PC++;
 }
+
 //SEt Carry flag
 void SEC(CPUState* cpu, address addr){
     cpu->P.E = 1;
 }
+
 //Decrement Accumulator
 void DECA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
@@ -522,6 +569,7 @@ void DECA(CPUState* cpu, address addr){
     }
     cpu->C.l--;
 }
+
 //Transfer Stack to aCcumulator
 void TSC(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
@@ -530,6 +578,7 @@ void TSC(CPUState* cpu, address addr){
     }
     cpu->C.l = cpu->S.l;
 }
+
 //ReTurn from Interrupt
 void RTI(CPUState* cpu, address addr){
     byte P = pull(cpu);
@@ -554,10 +603,12 @@ void EOR(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
+
 //William David Mensch (2 byte NOP)
 void WDM(CPUState* cpu, address addr){
     //
 }
+
 //MoVe block Positive
 void MVP(CPUState* cpu, address addr){
     byte dest_bank = mem_fetch(cpu, addr);
@@ -569,6 +620,7 @@ void MVP(CPUState* cpu, address addr){
         cpu->C = sub_2_1(cpu->C, 0x01);
     }
 }
+
 //Logical Shift Right
 void LSR(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
@@ -588,11 +640,13 @@ void LSR(CPUState* cpu, address addr){
     cpu->P.N = val >> 7;
     cpu->P.Z = (val == 0);
 }
+
 //PusH Accumulator
 void PHA(CPUState* cpu, address addr){
     push(cpu, cpu->C.h);
     push(cpu, cpu->C.l);
 }
+
 //Logical Shift Right Accumulator
 void LSRA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){
@@ -607,19 +661,23 @@ void LSRA(CPUState* cpu, address addr){
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = (cpu->C.l == 0);
 }
+
 //PusH program BanK
 void PHK(CPUState* cpu, address addr){
     push(cpu, cpu->PBR);
 }
+
 //JuMP
 void JMP(CPUState* cpu, address addr){
     cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
 }
+
 //JMP Long addr
 void JMPL(CPUState* cpu, address addr){
     cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
     cpu->PBR = mem_fetch(cpu, inc_addr(inc_addr(addr)));
 }
+
 //Branch if oVerflow Clear
 void BVC(CPUState* cpu, address addr){
     char offset = mem_fetch(cpu, addr);
@@ -629,6 +687,7 @@ void BVC(CPUState* cpu, address addr){
     }
     cpu->PC++;
 }
+
 //MoVe block Negative
 void MVN(CPUState* cpu, address addr){
     byte dest_bank = mem_fetch(cpu, addr);
@@ -640,18 +699,73 @@ void MVN(CPUState* cpu, address addr){
         cpu->C = sub_2_1(cpu->C, 0x01);
     }
 }
+
 //CLear Interrupt flag
 void CLI(CPUState* cpu, address addr){
     cpu->P.I = 0;
 }
+
 //PusH Y
 void PHY(CPUState* cpu, address addr){
     push(cpu, cpu->Y / 256);
     push(cpu, cpu->Y % 256);
 }
+
 //Transdfer aCcumulator to D
 void TCD(CPUState* cpu, address addr){
     cpu->D = cpu->C.h * 256 + cpu->C.l;
+}
+
+//ReTurn from Subroutine
+void RTS(CPUState* cpu, address addr){
+
+}
+
+//ADd with Carry
+void ADC(CPUState* cpu, address addr){
+    if(cpu->P.M == 0){//16-bit
+        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        cpu->C = separate_bytes(v + bytes_to_int(cpu->C.h, cpu->C.l));
+        cpu->P.N = cpu->C.h >> 7;
+        cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+        return;
+    }
+    byte v = mem_fetch(cpu, addr);
+    cpu->C.l = cpu->C.l + v;
+    cpu->P.N = cpu->C.l >> 7;
+    cpu->P.Z = cpu->C.l == 0;
+}
+
+//Push Effective pc Relative
+void PER(CPUState* cpu, address addr){
+    uint16_t sum = cpu->PC + mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+    push(cpu, sum / 256);
+    push(cpu, sum % 256);
+}
+
+//STore Zero
+void STZ(CPUState* cpu, address addr){
+    
+}
+
+//ROtate Right
+void ROR(CPUState* cpu, address addr){
+    
+}
+
+//PuLl Accumulator
+void PLA(CPUState* cpu, address addr){
+    
+}
+
+//ROtate Right Accumulator
+void RORA(CPUState* cpu, address addr){
+    
+}
+
+//ReTurn from subroutine Long
+void RTL(CPUState* cpu, address addr){
+    
 }
 const instr_data instructions[] = {
     {s, 7, 2, BRK},
@@ -755,6 +869,23 @@ const instr_data instructions[] = {
     {ax, 4, 3, EOR},
     {ax, 7, 3, LSR},
     {alx, 5, 4, EOR},
+
+    {s, 6, 1, RTS},
+    {dxi, 6, 2, ADC},
+    {s, 6, 3, PER},
+    {ds, 4, 2, ADC},
+    {d, 3, 2, STZ},
+    {d, 3, 2, ADC},
+    {d, 5, 2, ROR},
+    {dli, 6, 2, ADC},
+    {s, 4, 1, PLA},
+    {imm, 2, 2, ADC},
+    {nil, 2, 1, RORA},
+    {s, 6, 1, RTL},
+    {ai, 5, 3, JMP},
+    {a, 4, 3, ADC},
+    {a, 6, 3, ROR},
+    {al, 5, 4, ADC},
     /*
     {},
     {},
