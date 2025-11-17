@@ -1,23 +1,6 @@
 #define CYCLE_TIME (62)
 //~62 home ticks per 65c816 tick
 
-
-typedef struct address{
-    byte bank;
-    uint16_t addr;
-}address;
-
-typedef struct StatusReg{
-    char N:1;//bit 7: Negative
-    char V:1;//bit 6: oVerflow
-    char M:1;//bit 5: Memory/accumulator size (0: 16-bit, 1: 8-bit)
-    char X:1;//bit 4: indeX size (0:16-bit, 1:8-bit)
-    char D:1;//bit 3: Decimal mode
-    char I:1;//bit 2: Interrupt disable (only on IRQ)
-    char Z:1;//bit 1: Zero
-    char E:1;//bit 0: Emulation or Carry
-}StatusReg;
-
 byte status_to_byte(StatusReg P){
     byte out = 0x00;
     out += P.E;
@@ -50,31 +33,6 @@ void status_apply_mask(StatusReg* P, byte set_bits, byte clear_bits){
     *P = byte_to_status(P_byte);
 }
 
-typedef struct CPUState{
-    uint16_t X, Y;//index registers
-    uint16_t D;//direct register
-    two_bytes C;//accumulator
-    StatusReg P;//processor status register
-    uint16_t PC;//program counter
-    two_bytes S;//stack address register
-    byte DBR;//data bank register
-    byte PBR;//program bank register
-    byte* mem[256];//mem bank pointers
-    int expected_time;//when the current instruction should finish
-    int current_time;
-}CPUState;
-
-typedef struct Rom{
-    byte* raw;
-    long int size:24;//long to ensure at least 24 bits reg. int may only be 16
-}Rom;
-
-typedef struct instr_data{
-    address (*addr_func)(CPUState*);//function to calculate effective address
-    byte cycle_count;
-    byte read_bytes;//num of bytes read, includes opcode
-    void (*instr_func)(CPUState*, address);//function to excecute instruction
-}instr_data;
 
 void push(CPUState* cpu, byte val){
     if (cpu->P.M == 0) cpu->mem[0][cpu->S.h * 256 + cpu->S.l] = val;
@@ -103,8 +61,7 @@ stub.
 Will write rom to proper memory banks/regions, 
 and allocate used non-rom banks (e.g. ram, sram, i/o &c.)*/
 char write_rom(CPUState* cpu, Rom rom){
-    byte rom_bitmask;
-    if(rom_bitmask == 0);
+    cpu->rom_mode = 0x00;
     for (byte bank = 0; bank<0xFF; bank++){
         ;
     }
@@ -118,8 +75,11 @@ Rom test_rom = {(byte[]){0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA},8};//a bunch o
 
 /*start up cpu, initialize regs, set load interrupt vector etc.*/
 void init_cpu(CPUState* cpu, Rom rom){
-    cpu->current_time = RTC_GetTicks();
+    for (int i = 0; i < 256; i++){
+        cpu->mem[i] = NULL;
+    }
     cpu->expected_time = RTC_GetTicks();
+    cpu->current_time = RTC_GetTicks();
     cpu->D = 0x0000;
     cpu->DBR = 0x00;
     cpu->PBR = 0x00;
@@ -157,6 +117,8 @@ char mem_set(CPUState* cpu, byte value, address addr){
         sys_realloc(cpu->mem[addr.bank], 65536 * sizeof(byte));
     }
     cpu->mem[addr.bank][addr.addr] = value;
+    //ppu regs at 2100-213f: also set cpu->ppu.-----
+    //no need to allocate certain banks, since they are mirrors, so you can just read/write those
     return 0;
 }
 
@@ -811,7 +773,7 @@ void SEI(CPUState* cpu, address addr){
 
 //PuLl Y
 void PLY(CPUState* cpu, address addr){
-
+    cpu->Y = pull(cpu) + pull(cpu) * 256;
 }
 
 //Transfer D to aCcumulator

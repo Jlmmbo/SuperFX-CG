@@ -8,5 +8,4 @@
     - controller
     - other memory mapped peripherals
 - GUI
-- rom loading
-- multiple simultaneous rom accesses, (ppu & cpu)
+- rom mapping (for mirrored banks, just set the pointer to the same memory region)
