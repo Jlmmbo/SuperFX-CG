@@ -794,6 +794,96 @@ void RTL(CPUState* cpu, address addr){
     cpu->PBR = pull(cpu);
 }
 
+//Branch oVerflow Set
+void BVS(CPUState* cpu, address addr){
+    char offset = mem_fetch(cpu, addr);
+    if(cpu->P.V == 1){
+        cpu->PC = cpu->PC + (offset - 128);
+        return;
+    }
+    cpu->PC++;
+}
+
+//SEt Interrupt flag
+void SEI(CPUState* cpu, address addr){
+    cpu->P.I = 1;
+}
+
+//PuLl Y
+void PLY(CPUState* cpu, address addr){
+
+}
+
+//Transfer D to aCcumulator
+void TDC(CPUState* cpu, address addr){
+    cpu->C = (two_bytes){cpu->D / 256, cpu->D %  256};
+}
+
+//BRanch Always
+void BRA(CPUState* cpu, address addr){
+    char offset = mem_fetch(cpu, addr);
+    cpu->PC = cpu->PC + (offset - 128);
+}
+
+//STore Accumulator
+void STA(CPUState* cpu, address addr){
+    if (cpu->P.M == 0){//16-bit
+        mem_set(cpu, cpu->C.l, addr);
+        mem_set(cpu, cpu->C.h, inc_addr(addr));
+        return;
+    }
+    mem_set(cpu, cpu->C.l, addr);
+}
+
+//BRanch Long
+void BRL(CPUState* cpu, address addr){
+    uint16_t offset = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+    cpu->PC = cpu->PC + (offset - 32768);
+}
+
+//STore Y
+void STY(CPUState* cpu, address addr){
+    if (cpu->P.X == 0){//16-bit
+        mem_set(cpu, cpu->Y / 256, addr);
+        mem_set(cpu, cpu->Y % 256, inc_addr(addr));
+        return;
+    }
+    mem_set(cpu, cpu->Y / 256, addr);
+}
+
+//STore X
+void STX(CPUState* cpu, address addr){
+    if (cpu->P.X == 0){//16-bit
+        mem_set(cpu, cpu->X / 256, addr);
+        mem_set(cpu, cpu->X % 256, inc_addr(addr));
+        return;
+    }
+    mem_set(cpu, cpu->X / 256, addr);
+}
+
+//DECrement Y
+void DEY(CPUState* cpu, address addr){
+    if (cpu->P.X == 0){//16-bit
+        cpu->Y--;
+    } else {
+        cpu->Y = (cpu->Y / 256) + ((cpu->Y % 256) - 1);
+    }
+    cpu->P.N = cpu->Y >> 7;
+    cpu->P.Z = cpu->Y == 0;
+}
+
+//Transfer X to Accumulator
+void TXA(CPUState* cpu, address addr){
+    cpu->C = (two_bytes){cpu->X / 256, cpu->X % 256};
+    cpu->P.N = cpu->C.h >> 7;
+    cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+}
+
+//PusH data Bank
+void PHB(CPUState* cpu, address addr){
+    push(cpu, cpu->DBR);
+}
+
 const instr_data instructions[] = {
     {s, 7, 2, BRK},
     {dxi, 6, 2, ORA},
@@ -913,7 +1003,40 @@ const instr_data instructions[] = {
     {a, 4, 3, ADC},
     {a, 6, 3, ROR},
     {al, 5, 4, ADC},
+
+    {r, 2, 2, BVS},
+    {diy, 5, 2, ADC},
+    {di, 5, 2, ADC},
+    {dsiy, 7, 2, ADC},
+    {dx, 4, 2, STZ},
+    {dx, 4, 2, ADC},
+    {dx, 6, 2, ROR},
+    {dliy, 6, 2, ADC},
+    {nil, 2, 1, SEI},
+    {ay, 4, 3, ADC},
+    {s, 4, 1, PLY},
+    {nil, 2, 1, TDC},
+    {axi, 6, 3, JMP},
+    {ax, 4, 3, ADC},
+    {ax, 7, 3, ROR},
+    {alx, 5, 4, ADC},
     
+    {r, 2, 2, BRA},
+    {dx, 6, 2, STA},
+    {rl, 4, 3, BRL},
+    {ds, 4, 2, STA},
+    {d, 3, 2, STY},
+    {d, 3, 2, STA},
+    {d, 3, 2, STX},
+    {dli, 2, 2, STA},
+    {nil, 2, 1, DEY},
+    {imm, 2, 2, BIT},
+    {nil, 2, 1, TXA},
+    {s, 3, 1, PHB},
+    {a, 4, 3, STY},
+    {a, 4, 3, STA},
+    {a, 4, 3, STX},
+    {al, 5, 3, STA},
     /*
     {},
     {},

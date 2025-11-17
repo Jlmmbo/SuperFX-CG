@@ -34,4 +34,5 @@ int keydownhold(int basic_keycode) {
 
 #include "binary.h"
 #include "65C816.h"
+#include "filesystem.h"
 #include "UI.h"

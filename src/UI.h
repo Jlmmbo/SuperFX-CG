@@ -123,10 +123,8 @@ void CopySpriteNbit(const unsigned char* data, int x, int y, int width, int heig
    }
 }
 
-void CopySpriteNbitMasked(const unsigned char* data, int x, int y, int width, int height, const color_t* palette, color_t maskColor, unsigned int bitwidth)  
- {
+void CopySpriteNbitMasked(const unsigned char* data, int x, int y, int width, int height, const color_t* palette, color_t maskColor, unsigned int bitwidth) {
    color_t* VRAM = (color_t*) GetVRAMAddress();
-
    VRAM += (LCD_WIDTH_PX * y + x);
 
    int offset = 0;
@@ -145,6 +143,7 @@ void CopySpriteNbitMasked(const unsigned char* data, int x, int y, int width, in
          }
 
          color_t color = palette[(color_t)buf>>(8-bitwidth)];
+
          if(color != maskColor) {
             *VRAM = color;
          }
@@ -161,8 +160,7 @@ void fillArea(unsigned x, unsigned y, unsigned w, unsigned h, unsigned short col
     s += (y * 384) + x;
     while(h--){
         unsigned w2 = w;
-        while(w2--)
-            *s++ = col;
+        while(w2--) *s++ = col;
         s += 384 - w;
     }
 }
@@ -248,7 +246,8 @@ Rom main_menu_ui(int keybinds[12]){
       } // end switch(menu_index)
 
       //load ROM
-      unsigned char rom_selection_list = get_rom_list_fs();
+      char** rom_selection_list = NULL;// char ** -> a string list
+      get_rom_list_fs(rom_selection_list);
       //placeholder
       //uncommenrt when load_rom_fs is implemented
       // Rom selected_rom = load_rom_fs(list_menu_ui("SELECT ROM", rom_selection_list, sizeof(rom_selection_list)/sizeof(rom_selection_list[0])));

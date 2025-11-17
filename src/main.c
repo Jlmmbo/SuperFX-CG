@@ -1,6 +1,7 @@
 #include <fxcg/display.h>
 #include <fxcg/keyboard.h>
 #include <fxcg/heap.h>
+#include <fxcg/file.h>
 #include <fxcg/rtc.h>
 
 #include "main.h"
