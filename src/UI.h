@@ -175,17 +175,17 @@ int map_key_ui(char* key_name){
     return key;
 }
 
-unsigned char list_menu_ui(char* title, char* options[], unsigned char option_count){
+unsigned char list_ui(char* title, char* options[], unsigned char option_count, unsigned char colour){
     unsigned char list_index = 0;
     while (1){
         keyupdate();
         put_disp();
-        PrintXY(1, 2, title, 0, TEXT_COLOR_WHITE);
+        PrintXY(1, 2, title, 0, colour);
         for (unsigned char i = 0; i < option_count; i++){
             if (i == list_index){
                 PrintXY(1, 2 + i + 1, options[i], 0, 0);
             } else {
-                PrintXY(1, 2 + i + 1, options[i], 0, TEXT_COLOR_WHITE);
+                PrintXY(1, 2 + i + 1, options[i], 0, colour);
             }
         }
         if (keydownlast(KEY_CTRL_DOWN)){
@@ -205,39 +205,41 @@ unsigned char list_menu_ui(char* title, char* options[], unsigned char option_co
 
 Rom main_menu_ui(int keybinds[12]){
    while (1){
-      unsigned char menu_index = list_menu_ui("Main menu", (char*[]){"Settings", "Load ROM", "Exit"}, 4);
+      unsigned char menu_index = list_ui("Main menu", (char*[]){"Settings", "Load ROM", "Exit"}, 4, 0);
       switch (menu_index) {
       case 0:
          //settings
          if (keydownlast(KEY_SHIFT_OPTN)){
             PrintXY(1, 2, " Main menu", 0, TEXT_COLOR_WHITE);
-            PrintXY(1,2, "  Settings", 0, 0);
-            unsigned char option = list_menu_ui("Settings", (char*[]){"Keybinds", "Brightness", "Frameskip", "Colour Palet"}, 4);
+            unsigned char option = list_ui("Settings", (char*[]){"Keybinds", "Brightness", "Frameskip", "Colour Palet"}, 4, 0);
             switch(option){
-                  case 0://keybinds
-                     keybinds[0] = map_key_ui("D-UP");
-                     keybinds[1] = map_key_ui("D-DOWN");
-                     keybinds[2] = map_key_ui("D-LEFT");
-                     keybinds[3] = map_key_ui("D-RIGHT");
-                     keybinds[4] = map_key_ui("A");
-                     keybinds[5] = map_key_ui("B");
-                     keybinds[6] = map_key_ui("X");
-                     keybinds[7] = map_key_ui("Y");
-                     keybinds[8] = map_key_ui("L");
-                     keybinds[9] = map_key_ui("R");
-                     keybinds[10] = map_key_ui("START");
-                     keybinds[11] = map_key_ui("SELECT");
-                     break;
-                  case 1://brightness
-                     list_menu_ui("Brightness", (char*[]){"Ultra low", "Low", "Medium", "High", "Very high"}, 3);
-                     //placeholder
-                     break;
-                  case 2://frameskip
+               case 0://keybinds
+                  keybinds[0] = map_key_ui("D-UP");
+                  keybinds[1] = map_key_ui("D-DOWN");
+                  keybinds[2] = map_key_ui("D-LEFT");
+                  keybinds[3] = map_key_ui("D-RIGHT");
+                  keybinds[4] = map_key_ui("A");
+                  keybinds[5] = map_key_ui("B");
+                  keybinds[6] = map_key_ui("X");
+                  keybinds[7] = map_key_ui("Y");
+                  keybinds[8] = map_key_ui("L");
+                  keybinds[9] = map_key_ui("R");
+                  keybinds[10] = map_key_ui("START");
+                  keybinds[11] = map_key_ui("SELECT");
+                  break;
+               case 1://brightness
+                  list_ui("Brightness", (char*[]){"Ultra low", "Low", "Medium", "High", "Very high"}, 3, 0);
+                  //placeholder
+                  break;
+               case 2://frameskip
 
-                     break;
-                  case 3://colour palette
+                  break;
+               case 3://colour palette
 
-                     break;
+                  break;
+               case 4://back to main menu
+
+                  break;
             }
             //  Brightness
             //  Frameskip
@@ -251,7 +253,7 @@ Rom main_menu_ui(int keybinds[12]){
       unsigned char rom_selection_list = get_rom_list_fs();
       //placeholder
       //uncommenrt when load_rom_fs is implemented
-      // Rom selected_rom = load_rom_fs(list_menu_ui("SELECT ROM", rom_selection_list, sizeof(rom_selection_list)/sizeof(rom_selection_list[0])));
+      // Rom selected_rom = load_rom_fs(list_ui("SELECT ROM", rom_selection_list, sizeof(rom_selection_list)/sizeof(rom_selection_list[0])));
          
       if (keydownlast(KEY_CTRL_EXIT)){
          //Exits the emulator
@@ -295,7 +297,7 @@ void pause_menu_ui(CPUState* cpu){
 // +        keyupdate();
 // +        put_disp();
 // +        PrintXY(1, 1, "  Paused", 0, TEXT_COLOR_WHITE);
-// +        unsigned char sel = list_menu_ui("Paused", (char**)options, 5);
+// +        unsigned char sel = list_ui("Paused", (char**)options, 5);
 // +        switch(sel){
 // +            case 0: // Resume
 // +                return;
