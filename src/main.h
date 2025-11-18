@@ -68,6 +68,17 @@ typedef struct PPU{
     byte inidisp;
     uint16_t bghofs[4];
     uint16_t bgvofs[4];
+    //for modes that dont use certain bgs, set their priority to 0, any time that the get fetched return transparent
+    Tile bg1[64][64];
+    Tile bg2[64][64];
+    Tile bg3[64][64];
+    Tile bg4[64][64];
+    byte bgsizes;//00000000
+                 //|||||||+-bg1 size: 32(0) or (64) wide
+                 //||||||+--bg1 size: 32(0) or (64) wide
+                 //||||++---bg2 size
+                 //||++-----bg3 size
+                 //++-------bg4 size
     unsigned short sprite_index;//maybe fit into a byte
     OBJ* OBJ_line_buffer;
     byte num_bg_layers;

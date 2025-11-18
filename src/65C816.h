@@ -624,7 +624,7 @@ void LSRA(CPUState* cpu, address addr){
     cpu->P.Z = (cpu->C.l == 0);
 }
 
-//PusH program BanK
+//PusH program banK
 void PHK(CPUState* cpu, address addr){
     push(cpu, cpu->PBR);
 }
@@ -846,6 +846,93 @@ void PHB(CPUState* cpu, address addr){
     push(cpu, cpu->DBR);
 }
 
+//Branch Carry Clear
+void BCC(CPUState* cpu, address addr){
+    char offset = mem_fetch(cpu, addr);
+    if(cpu->P.E == 1){
+        cpu->PC = cpu->PC + (offset - 128);
+        return;
+    }
+    cpu->PC++;
+}
+
+//Transfer Y to Accumulator
+void TYA(CPUState* cpu, address addr){
+    cpu->C = (two_bytes){cpu->Y / 256, cpu->Y % 256};
+    cpu->P.N = cpu->C.h >> 7;
+    cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+}
+
+//Transfer X to Stack
+void TXS(CPUState* cpu, address addr){
+    cpu->S = (two_bytes){cpu->X / 256, cpu->X % 256};
+    cpu->P.N = cpu->S.h >> 7;
+    cpu->P.Z = (cpu->S.h == 0) && (cpu->S.l == 0);
+}
+
+//Transfer Y to Accumulator
+void TXY(CPUState* cpu, address addr){
+    cpu->X = cpu->Y;
+    cpu->P.N = cpu->X >> 7;
+    cpu->P.Z = cpu->X == 0;
+}
+
+//LoaD to Y
+void LDY(CPUState* cpu, address addr){
+    if(cpu->P.M == 0){//16-bit
+        cpu->Y = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr));
+        cpu->P.N = cpu->Y >> 15;
+    } else {
+        cpu->Y = mem_fetch(cpu, addr);
+        cpu->P.N = cpu->Y >> 7;
+    }
+    cpu->P.Z = cpu->Y == 0;
+}
+
+//LoaD to Accumulator
+void LDA(CPUState* cpu, address addr){
+    if(cpu->P.M == 0){//16-bit
+        cpu->C = (two_bytes){mem_fetch(cpu, inc_addr(addr)), mem_fetch(cpu, addr)};
+        cpu->P.N = cpu->C.h >> 7;
+        cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l== 0);
+    } else {
+        cpu->C.l = mem_fetch(cpu, addr);
+        cpu->P.N = cpu->C.l >> 7;
+        cpu->P.Z = cpu->C.l == 0;
+    }
+}
+
+//LoaD to X
+void LDX(CPUState* cpu, address addr){
+    if(cpu->P.M == 0){//16-bit
+        cpu->X = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr));
+        cpu->P.N = cpu->X >> 15;
+    } else {
+        cpu->X = mem_fetch(cpu, addr);
+        cpu->P.N = cpu->X >> 7;
+    }
+    cpu->P.Z = cpu->X == 0;
+}
+
+//Transfer Accumulator to Y
+void TAY(CPUState* cpu, address addr){
+    cpu->Y = cpu->C.h * 256 + cpu->C.l;
+    cpu->P.N = cpu->Y >> 15;
+    cpu->P.Z = cpu->Y == 0;
+}
+
+//Transfer Accumulator to X
+void TAX(CPUState* cpu, address addr){
+    cpu->X = cpu->C.h * 256 + cpu->C.l;
+    cpu->P.N = cpu->X >> 15;
+    cpu->P.Z = cpu->X == 0;
+}
+
+//PuLl data Bank
+void PLB(CPUState* cpu, address addr){
+    cpu->DBR = pull(cpu);
+}
+
 const instr_data instructions[] = {
     {s, 7, 2, BRK},
     {dxi, 6, 2, ORA},
@@ -999,6 +1086,40 @@ const instr_data instructions[] = {
     {a, 4, 3, STA},
     {a, 4, 3, STX},
     {al, 5, 3, STA},
+
+    {r, 2, 2, BCC},
+    {diy, 6, 2, STA},
+    {di, 5, 2, STA},
+    {dsiy, 7, 2, STA},
+    {dx, 4, 2, STY},
+    {dx, 4, 2, STA},
+    {dy, 4, 2, STX},
+    {dliy, 6, 2, STA},
+    {nil, 2, 1, TYA},
+    {ay, 5, 3, STA},
+    {nil, 2, 1, TXS},
+    {nil, 2, 1, TXY},
+    {a, 4, 3, STZ},
+    {ax, 5, 3, STA},
+    {ax, 5, 3, STZ},
+    {alx, 5, 4, STA},
+
+    {imm, 2, 2, LDY},
+    {dxi, 6, 2, LDA},
+    {imm, 2, 2, LDX},
+    {ds, 4, 2, LDA},
+    {d, 3, 2, LDY},
+    {d, 3, 2, LDA},
+    {d, 3, 2, LDX},
+    {dli, 6, 2, LDA},
+    {nil, 2, 1, TAY},
+    {imm, 2, 2, LDA},
+    {nil, 2, 1, TAX},
+    {s, 4, 1, PLB},
+    {a, 4, 3, LDY},
+    {a, 4, 3, LDA},
+    {a, 4, 3, LDX},
+    {al, 5, 4, LDA},
     /*
     {},
     {},
