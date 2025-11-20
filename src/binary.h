@@ -8,6 +8,10 @@ byte apply_mask(byte val, byte set_bits, byte clear_bits){
     return (val | set_bits) & clear_bits;
 }
 
+byte get_bit(byte v, byte ind){
+    return ((v & (1 << ind)) >> ind);
+}
+
 //convert an integer (0-65535) into a high byte and a low byte
 two_bytes separate_bytes(uint16_t n){
     short hi = n & 0xFF00;

@@ -9,3 +9,6 @@
     - other memory mapped peripherals
 - GUI
 - rom mapping (for mirrored banks, just set the pointer to the same memory region)
+- bgn_px = wrong thing !! deal w/ bitplanes
+- different bg modes
+- different bpp modes(currently only 4bpp)

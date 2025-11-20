@@ -2,6 +2,8 @@
 #include <stdint.h>
 
 #define NON_BLOCK_DMA 1
+#define true (1)
+#define false (0)
 
 void put_disp(void);
 
@@ -62,27 +64,31 @@ typedef struct OBJ{
     unsigned short y_end;
 }OBJ;
 
+typedef struct Tile{
+   byte data[8][8];
+}Tile;
+
 typedef struct PPU{
     unsigned short h_cntr;//maybe fit into a byte
     unsigned short v_cntr;//maybe fit into a byte
-    byte inidisp;
-    uint16_t bghofs[4];
-    uint16_t bgvofs[4];
-    //for modes that dont use certain bgs, set their priority to 0, any time that the get fetched return transparent
-    Tile bg1[64][64];
-    Tile bg2[64][64];
-    Tile bg3[64][64];
-    Tile bg4[64][64];
-    byte bgsizes;//00000000
-                 //|||||||+-bg1 size: 32(0) or (64) wide
-                 //||||||+--bg1 size: 32(0) or (64) wide
-                 //||||++---bg2 size
-                 //||++-----bg3 size
-                 //++-------bg4 size
-    unsigned short sprite_index;//maybe fit into a byte
-    OBJ* OBJ_line_buffer;
-    byte num_bg_layers;
-    void* OAM;
+    //registers
+    byte BG1SC;
+    byte BG2SC;
+    byte BG3SC;
+    byte BG4SC;
+    byte BG1HOFS;
+    byte BG2HOFS;
+    byte BG3HOFS;
+    byte BG4HOFS;
+    byte BG1VOFS;
+    byte BG2VOFS;
+    byte BG3VOFS;
+    byte BG4VOFS;
+    byte BG12NBA;
+    byte BG34NBA;
+    byte BGCOLOR;
+    byte CGADD;
+    uint16_t VRAM[32768];
 }PPU;
 
 typedef struct CPUState{
