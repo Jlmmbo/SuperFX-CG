@@ -849,7 +849,7 @@ void PHB(CPUState* cpu, address addr){
 //Branch Carry Clear
 void BCC(CPUState* cpu, address addr){
     char offset = mem_fetch(cpu, addr);
-    if(cpu->P.E == 1){
+    if(cpu->P.E == 0){
         cpu->PC = cpu->PC + (offset - 128);
         return;
     }
@@ -931,6 +931,35 @@ void TAX(CPUState* cpu, address addr){
 //PuLl data Bank
 void PLB(CPUState* cpu, address addr){
     cpu->DBR = pull(cpu);
+}
+
+//Branch Carry Set
+void BCS(CPUState* cpu, address addr){
+    char offset = mem_fetch(cpu, addr);
+    if(cpu->P.E == 1){
+        cpu->PC = cpu->PC + (offset - 128);
+        return;
+    }
+    cpu->PC++;
+}
+
+//CLear oVerflow flag
+void CLV(CPUState* cpu, address addr){
+    cpu->P.V = 0;
+}
+
+//Transfer Stack to X
+void TSX(CPUState* cpu, address addr){
+    cpu->X = cpu->S.h * 256 + cpu->S.l;
+    cpu->P.N = cpu->X >> 15;
+    cpu->P.Z = cpu->X == 0;
+}
+
+//Transfer Y to X
+void TYX(CPUState* cpu, address addr){
+    cpu->X = cpu->Y;
+    cpu->P.N = cpu->X >> 15;
+    cpu->P.Z = cpu->X == 0;
 }
 
 const instr_data instructions[] = {
@@ -1120,6 +1149,23 @@ const instr_data instructions[] = {
     {a, 4, 3, LDA},
     {a, 4, 3, LDX},
     {al, 5, 4, LDA},
+    
+    {r, 2, 2, BCS},
+    {diy, 5, 2, LDA},
+    {di, 5, 2, LDA},
+    {dsiy, 7, 2, LDA},
+    {dx, 4, 2, LDY},
+    {dx, 4, 2, LDA},
+    {dy, 4, 2, LDX},
+    {dliy, 6, 2, LDA},
+    {nil, 2, 1, CLV},
+    {ay, 4, 3, LDA},
+    {nil, 2, 1, TSX},
+    {nil, 2, 1, TYX},
+    {ax, 4, 3, LDY},
+    {ax, 4, 3, LDA},
+    {ay, 4, 3, LDX},
+    {alx, 5, 4, LDA},
     /*
     {},
     {},

@@ -23,7 +23,7 @@ void put_disp_strip(unsigned, unsigned);
 
    void DmaWaitNext(void){
       while(1){
-         if((*DMA0_DMAOR)&4)//Address error has occurred stop looping
+         if((*DMA0_DMAOR)&4)//Address error has occurred; stop looping
                break;
          if((*DMA0_CHCR_0)&2)//Transfer is done
                break;
@@ -203,31 +203,31 @@ unsigned char list_menu_ui(char* title, char* options[], unsigned char option_co
 
 Rom main_menu_ui(int keybinds[12]){
    while (1){
-      unsigned char menu_index = list_menu_ui("Main menu", (char*[]){"Settings", "Load ROM", "Exit"}, 4);
+      unsigned char menu_index = list_menu_ui("  Main menu", (char*[]){"  Settings", "  Load ROM", "  Exit"}, 4);
       switch (menu_index) {
       case 0:
          //settings
          if (keydownlast(KEY_SHIFT_OPTN)){
-            PrintXY(1, 2, " Main menu", 0, TEXT_COLOR_WHITE);
+            PrintXY(1, 2, "  Main menu", 0, TEXT_COLOR_WHITE);
             PrintXY(1,2, "  Settings", 0, 0);
-            unsigned char option = list_menu_ui("Settings", (char*[]){"Keybinds", "Brightness", "Frameskip", "Colour Palet"}, 4);
+            unsigned char option = list_menu_ui("  Settings", (char*[]){"  Keybinds", "  Brightness", "  Frameskip", "  Colour Palette"}, 4);
             switch(option){
                   case 0://keybinds
-                     keybinds[0] = map_key_ui("D-UP");
-                     keybinds[1] = map_key_ui("D-DOWN");
-                     keybinds[2] = map_key_ui("D-LEFT");
-                     keybinds[3] = map_key_ui("D-RIGHT");
-                     keybinds[4] = map_key_ui("A");
-                     keybinds[5] = map_key_ui("B");
-                     keybinds[6] = map_key_ui("X");
-                     keybinds[7] = map_key_ui("Y");
-                     keybinds[8] = map_key_ui("L");
-                     keybinds[9] = map_key_ui("R");
-                     keybinds[10] = map_key_ui("START");
-                     keybinds[11] = map_key_ui("SELECT");
+                     keybinds[0] = map_key_ui("  D-UP");
+                     keybinds[1] = map_key_ui("  D-DOWN");
+                     keybinds[2] = map_key_ui("  D-LEFT");
+                     keybinds[3] = map_key_ui("  D-RIGHT");
+                     keybinds[4] = map_key_ui("  A");
+                     keybinds[5] = map_key_ui("  B");
+                     keybinds[6] = map_key_ui("  X");
+                     keybinds[7] = map_key_ui("  Y");
+                     keybinds[8] = map_key_ui("  L");
+                     keybinds[9] = map_key_ui("  R");
+                     keybinds[10] = map_key_ui("  START");
+                     keybinds[11] = map_key_ui("  SELECT");
                      break;
                   case 1://brightness
-                     list_menu_ui("Brightness", (char*[]){"Ultra low", "Low", "Medium", "High", "Very high"}, 3);
+                     list_menu_ui("Brightness", (char*[]){"  Ultra low", "  Low", "  Medium", "  High", "  Very high"}, 3);
                      //placeholder
                      break;
                   case 2://frameskip

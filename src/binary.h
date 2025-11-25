@@ -1,15 +1,24 @@
+char vals[][3] = {"00","01","02","03","04","05","06","07","08","09","0A","0B","0C","0D","0E","0F","10","11","12","13","14","15","16","17","18","19","1A","1B","1C","1D","1E","1F","20","21","22","23","24","25","26","27","28","29","2A","2B","2C","2D","2E","2F","30","31","32","33","34","35","36","37","38","39","3A","3B","3C","3D","3E","3F","40","41","42","43","44","45","46","47","48","49","4A","4B","4C","4D","4E","4F","50","51","52","53","54","55","56","57","58","59","5A","5B","5C","5D","5E","5F","60","61","62","63","64","65","66","67","68","69","6A","6B","6C","6D","6E","6F","70","71","72","73","74","75","76","77","78","79","7A","7B","7C","7D","7E","7F","80","81","82","83","84","85","86","87","88","89","8A","8B","8C","8D","8E","8F","90","91","92","93","94","95","96","97","98","99","9A","9B","9C","9D","9E","9F","A0","A1","A2","A3","A4","A5","A6","A7","A8","A9","AA","AB","AC","AD","AE","AF","B0","B1","B2","B3","B4","B5","B6","B7","B8","B9","BA","BB","BC","BD","BE","BF","C0","C1","C2","C3","C4","C5","C6","C7","C8","C9","CA","CB","CC","CD","CE","CF","D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","DA","DB","DC","DD","DE","DF","E0","E1","E2","E3","E4","E5","E6","E7","E8","E9","EA","EB","EC","ED","EE","EF","F0","F1","F2","F3","F4","F5","F6","F7","F8","F9","FA","FB","FC","FD","FE","FF",};
+
+//convert a byte into a string 
 void byte_to_str(byte b, char* dest){
-    char vals[][3] = {"00","01","02","03","04","05","06","07","08","09","0A","0B","0C","0D","0E","0F","10","11","12","13","14","15","16","17","18","19","1A","1B","1C","1D","1E","1F","20","21","22","23","24","25","26","27","28","29","2A","2B","2C","2D","2E","2F","30","31","32","33","34","35","36","37","38","39","3A","3B","3C","3D","3E","3F","40","41","42","43","44","45","46","47","48","49","4A","4B","4C","4D","4E","4F","50","51","52","53","54","55","56","57","58","59","5A","5B","5C","5D","5E","5F","60","61","62","63","64","65","66","67","68","69","6A","6B","6C","6D","6E","6F","70","71","72","73","74","75","76","77","78","79","7A","7B","7C","7D","7E","7F","80","81","82","83","84","85","86","87","88","89","8A","8B","8C","8D","8E","8F","90","91","92","93","94","95","96","97","98","99","9A","9B","9C","9D","9E","9F","A0","A1","A2","A3","A4","A5","A6","A7","A8","A9","AA","AB","AC","AD","AE","AF","B0","B1","B2","B3","B4","B5","B6","B7","B8","B9","BA","BB","BC","BD","BE","BF","C0","C1","C2","C3","C4","C5","C6","C7","C8","C9","CA","CB","CC","CD","CE","CF","D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","DA","DB","DC","DD","DE","DF","E0","E1","E2","E3","E4","E5","E6","E7","E8","E9","EA","EB","EC","ED","EE","EF","F0","F1","F2","F3","F4","F5","F6","F7","F8","F9","FA","FB","FC","FD","FE","FF",
-    };
     dest = vals[b];
 }
 
+//set and clear individual bits in a 
 byte apply_mask(byte val, byte set_bits, byte clear_bits){
     return (val | set_bits) & clear_bits;
 }
 
+//select a single bit from a byte
 byte get_bit(byte v, byte ind){
-    return ((v & (1 << ind)) >> ind);
+    return (v & (1 << ind)) >> ind;
+}
+
+//selects a range of bits from the byte
+byte get_bits(byte v, byte ind, byte width){
+    byte end_zeros = ind - width;
+    return v & (((1 << width) - 1) << end_zeros) >> end_zeros;//sorry for the complicated math
 }
 
 //convert an integer (0-65535) into a high byte and a low byte
@@ -19,37 +28,36 @@ two_bytes separate_bytes(uint16_t n){
     return (two_bytes){(byte)hi, (byte)lo};
 }
 
-int two_bytes_to_int(two_bytes b){
-    return (int)(b.h*255+b.l);
+//converts a two_bytes into an uint16_t
+uint16_t two_bytes_to_int(two_bytes b){
+    return (uint16_t)(b.h*255+b.l);
 }
 
+//add two 16-bit values
 two_bytes add_2_2(two_bytes a, two_bytes b){
-    unsigned a_int = a.h * 256 + a.l;
-    unsigned b_int = b.h * 256 + b.l;
-    unsigned ans = (a_int + b_int) % 65536;
+    unsigned ans = ((a.h * 256 + a.l) + (b.h * 256 + b.l)) % 65536;
     return (two_bytes){ans & 0xFF00, ans & 0x00FF};
 }
 
+//add a 16- and an 8- bit value
 two_bytes add_2_1(two_bytes a, byte b){
-    unsigned a_int = a.h * 256 + a.l;
-    unsigned ans = (a_int + b) % 65535;
+    unsigned ans = ((a.h * 256 + a.l) + b) % 65535;
     return (two_bytes){ans & 0xFF00, ans & 0x00FF};
 }
 
+//subtract two 16-bit values
 two_bytes sub_2_2(two_bytes a, two_bytes b){
-    unsigned a_int = a.h * 256 + a.l;
-    unsigned b_int = b.h * 256 + b.l;
-    unsigned ans = (a_int - b_int) % 65536;
+    unsigned ans = ((a.h * 256 + a.l) - (b.h * 256 + b.l)) % 65536;
     return (two_bytes){ans & 0xFF00, ans & 0x00FF};
 }
 
+//subtract a 16- and an 8- bit value
 two_bytes sub_2_1(two_bytes a, byte b){
-    unsigned a_int = a.h * 256 + a.l;
-    unsigned ans = (a_int - b) % 65535;
+    unsigned ans = ((a.h * 256 + a.l) - b) % 65535;
     return (two_bytes){ans & 0xFF00, ans & 0x00FF};
 }
 
-
-int bytes_to_int(byte a, byte b){
-    return (int)(a*255+b);
+//convert two byte values into a single uint16_t
+uint16_t bytes_to_int(byte a, byte b){
+    return (uint16_t)(a*255+b);
 }
