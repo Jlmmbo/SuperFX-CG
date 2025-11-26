@@ -69,7 +69,7 @@ char write_rom(CPUState* cpu, Rom rom){
 }
 
 
-Rom test_rom = {(byte[]){0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA,0xEA},8};//a bunch of NOPs
+Rom test_rom = {(byte[]){0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA}, 8};//a bunch of NOPs
 
 
 
@@ -95,7 +95,7 @@ void init_cpu(CPUState* cpu, Rom rom){
     char err = write_rom(cpu, rom);
     if (err){//failed to allocate
         Bdisp_AllClr_VRAM();
-        PrintXY(1,1,"  GET MORE SPACE!!", 0, 0);
+        PrintXY(1, 1, "  GET MORE SPACE!!", 0, 0);
     }
 }
 
@@ -827,10 +827,11 @@ void STX(CPUState* cpu, address addr){
 void DEY(CPUState* cpu, address addr){
     if (cpu->P.X == 0){//16-bit
         cpu->Y--;
+        cpu->P.N = cpu->Y >> 15;
     } else {
         cpu->Y = (cpu->Y / 256) + ((cpu->Y % 256) - 1);
+        cpu->P.N = cpu->Y >> 7;
     }
-    cpu->P.N = cpu->Y >> 7;
     cpu->P.Z = cpu->Y == 0;
 }
 
@@ -960,6 +961,83 @@ void TYX(CPUState* cpu, address addr){
     cpu->X = cpu->Y;
     cpu->P.N = cpu->X >> 15;
     cpu->P.Z = cpu->X == 0;
+}
+
+//ComPare memory with Y
+void CPY(CPUState* cpu, address addr){
+
+}
+
+//CoMPare memory with Accumulator
+void CMP(CPUState* cpu, address addr){
+    if(cpu->P.M == 0){//16-bit
+        uint16_t C = cpu->C.h * 256 + cpu->C.l;
+        uint16_t val = C - mem_fetch(cpu, addr);
+        cpu->P.Z = val == 0;
+        cpu->P.N = val >> 15;
+        cpu->P.E = val <= C;
+        return;
+    }
+    byte val = cpu->C.l - mem_fetch(cpu, addr);
+    cpu->P.Z = val == 0;
+    cpu->P.N = val >> 7;
+    cpu->P.E = val <= cpu->C.l;
+}
+
+//REset P bits
+void REP(CPUState* cpu, address addr){
+    //mem_set(cpu, (val ^ cpu->C.l) & val, addr);
+    if (cpu->P.M == 0){//16-bit
+        byte P_byte = status_to_byte(cpu->P);
+        cpu->P = byte_to_status(((P_byte ^ mem_fetch(cpu, addr)) & P_byte));
+        return;
+    }
+    byte P_byte = status_to_byte(cpu->P);
+    cpu->P = byte_to_status((P_byte ^ mem_fetch(cpu, addr)) & P_byte & 0b11001111);//can't change M or X flags if in emulation mode
+}
+
+//DECrement memory
+void DEC(CPUState* cpu, address addr){
+    uint16_t val;
+    if (cpu->P.X == 0){//16-bit
+        val = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) - 1;
+        cpu->P.N = cpu->Y >> 15;
+        mem_set(cpu, val % 65536, addr);
+        mem_set(cpu, val / 65536, inc_addr(addr));
+    } else {
+        val = mem_fetch(cpu, addr) - 1;
+        cpu->P.N = cpu->Y >> 7;
+    }
+    cpu->P.Z = val == 0;
+}
+
+//INcrement Y
+void INY(CPUState* cpu, address addr){
+    if (cpu->P.X == 0){//16-bit
+        cpu->Y++;
+        cpu->P.N = cpu->Y >> 15;
+    } else {
+        cpu->Y = (cpu->Y / 256) + ((cpu->Y % 256) + 1);
+        cpu->P.N = cpu->Y >> 7;
+    }
+    cpu->P.Z = cpu->Y == 0;
+}
+
+//DEcrement X
+void DEX(CPUState* cpu, address addr){
+    if (cpu->P.X == 0){//16-bit
+        cpu->X--;
+        cpu->P.N = cpu->X >> 15;
+    } else {
+        cpu->X = (cpu->X / 256) + ((cpu->X % 256) - 1);
+        cpu->P.N = cpu->X >> 7;
+    }
+    cpu->P.Z = cpu->X == 0;
+}
+
+//WAit for Interrupt
+void WAI(CPUState* cpu, address addr){
+    while(!(cpu->NMI | cpu->IRQ));
 }
 
 const instr_data instructions[] = {
@@ -1166,6 +1244,23 @@ const instr_data instructions[] = {
     {ax, 4, 3, LDA},
     {ay, 4, 3, LDX},
     {alx, 5, 4, LDA},
+
+    {imm, 2, 2, CPY},
+    {dxi, 6, 2, CMP},
+    {imm, 3, 2, REP},
+    {ds, 4, 2, CMP},
+    {d, 3, 2, CPY},
+    {d, 3, 2, CMP},
+    {d, 5, 2, DEC},
+    {dli, 6, 2, CMP},
+    {nil, 2 , 1, INY},
+    {imm, 2, 2, CMP},
+    {nil, 2, 1, DEX},
+    {nil, 3, 1, WAI},
+    {a, 4, 3, CPY},
+    {a, 4, 3, CMP},
+    {a, 6, 3, DEC},
+    {al, 5, 4, CMP},
     /*
     {},
     {},

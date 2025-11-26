@@ -82,6 +82,7 @@ void cycle_PPU(PPU* ppu){
 
     byte px = ppu->BGCOLOR;
     byte palette = 0;
+    //placeholder, find a better way to implement priorities for multiple modes
     if(bg1_priority){
         if (bg1_px == 0){
             if(bg2_priority){

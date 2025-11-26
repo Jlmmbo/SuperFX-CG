@@ -13,7 +13,7 @@ void get_rom_list_fs(char ** rom_list){
     
     int err = Bfile_FindFirst("\\\\fls0\\*.snb", &FindHandle, FoundFile, fileinfo);//.snb -> Super Nintendo Broken-up (it will use a .exe to split into multiple files to bypass the 2mb file limit)
     if (err == -16){
-        PrintXY(1, 1, "No Roms", 0, TEXT_COLOR_BLACK);
+        PrintXY(1, 1, "  No Roms", 0, TEXT_COLOR_BLACK);
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
     }

@@ -92,6 +92,8 @@ typedef struct PPU{
 }PPU;
 
 typedef struct CPUState{
+    byte NMI:1;
+    byte IRQ:1;
     uint16_t X, Y;//index registers
     uint16_t D;//direct register
     two_bytes C;//accumulator
