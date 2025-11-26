@@ -249,8 +249,8 @@ Rom main_menu_ui(int keybinds[12]){
       char** rom_selection_list = NULL;// char ** -> a string list
       get_rom_list_fs(rom_selection_list);
       //placeholder
-      //uncommenrt when load_rom_fs is implemented
-      // Rom selected_rom = load_rom_fs(list_menu_ui("SELECT ROM", rom_selection_list, sizeof(rom_selection_list)/sizeof(rom_selection_list[0])));
+      //uncomment when load_rom_fs is implemented
+      // Rom selected_rom = load_rom_fs(list_menu_ui("  SELECT ROM", rom_selection_list, sizeof(rom_selection_list)/sizeof(rom_selection_list[0])));
          
       if (keydownlast(KEY_CTRL_EXIT)){
          //Exits the emulator
@@ -289,12 +289,12 @@ void pause_menu_ui(CPUState* cpu){
 // -        }
 // -    }
 // +    // Simple pause menu with common actions
-// +    const char* options[] = {"Resume", "Save State", "Load State", "Restart ROM", "Exit to Menu"};
+// +    const char* options[] = {"  Resume", "  Save State", "  Load State", "  Restart ROM", "  Exit to Menu"};
 // +    while (1){
 // +        keyupdate();
 // +        put_disp();
 // +        PrintXY(1, 1, "  Paused", 0, TEXT_COLOR_WHITE);
-// +        unsigned char sel = list_menu_ui("Paused", (char**)options, 5);
+// +        unsigned char sel = list_menu_ui("  Paused", (char**)options, 5);
 // +        switch(sel){
 // +            case 0: // Resume
 // +                return;

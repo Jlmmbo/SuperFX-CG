@@ -965,7 +965,17 @@ void TYX(CPUState* cpu, address addr){
 
 //ComPare memory with Y
 void CPY(CPUState* cpu, address addr){
-
+    if(cpu->P.X == 0){//16-bit
+        uint16_t val = cpu->Y - mem_fetch(cpu, addr);
+        cpu->P.Z = val == 0;
+        cpu->P.N = val >> 15;
+        cpu->P.E = val <= cpu->Y;
+        return;
+    }
+    byte val = cpu->Y - mem_fetch(cpu, addr);
+    cpu->P.Z = val == 0;
+    cpu->P.N = val >> 7;
+    cpu->P.E = val <= cpu->Y;
 }
 
 //CoMPare memory with Accumulator
@@ -1038,6 +1048,37 @@ void DEX(CPUState* cpu, address addr){
 //WAit for Interrupt
 void WAI(CPUState* cpu, address addr){
     while(!(cpu->NMI | cpu->IRQ));
+}
+
+//Branch Not Equal
+void BNE(CPUState* cpu, address addr){
+    char offset = mem_fetch(cpu, addr);
+    if(cpu->P.Z == 0){
+        cpu->PC = cpu->PC + (offset - 128);
+        return;
+    }
+    cpu->PC++;
+}
+
+//Push Effective Indirect address
+void PEI(CPUState* cpu, address addr){
+   push(cpu, mem_fetch(cpu, (address){cpu->PBR, mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->D}));
+}
+
+//CLear Decimal flag
+void CLD(CPUState* cpu, address addr){
+    cpu->P.D = 0;
+}
+
+//PusH Y
+void PHX(CPUState* cpu, address addr){
+    push(cpu, cpu->X / 256);
+    push(cpu, cpu->X % 256);
+}
+
+//SToP the clock
+void STP(CPUState* cpu, address addr){
+    while (cpu->RES);
 }
 
 const instr_data instructions[] = {
@@ -1261,6 +1302,23 @@ const instr_data instructions[] = {
     {a, 4, 3, CMP},
     {a, 6, 3, DEC},
     {al, 5, 4, CMP},
+
+    {r, 2, 2, BNE},
+    {diy, 5, 2, CMP},
+    {di, 5, 2, CMP},
+    {dsiy, 7, 2, CMP},
+    {nil, 6, 2, PEI},
+    {dx, 4, 2, CMP},
+    {dx, 6, 2, DEC},
+    {dliy, 6, 2, CMP},
+    {nil, 2, 1, CLD},
+    {ay, 4, 3, CMP},
+    {s, 3, 1, PHX},
+    {nil, 3, 1, STP},
+    {ai, 6, 3, JMPL},
+    {ax, 4, 3, CMP},
+    {ax, 7, 3, DEC},
+    {alx, 5, 4, CMP},
     /*
     {},
     {},

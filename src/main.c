@@ -33,7 +33,7 @@ int main(void) {
 
             if (keydownlast(KEY_CTRL_MENU)) break;
 
-            cycle_cpu(&cpu);
+            generate_frame(&cpu);
         }
         pause_menu_ui(&cpu);
     }
