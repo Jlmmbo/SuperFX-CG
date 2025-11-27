@@ -136,8 +136,15 @@ void generate_frame(CPUState* cpu){
     for(ppu.v_cntr = 0; ppu.v_cntr < PPU_SCREEN_HEIGHT; ppu.v_cntr++){
         for(ppu.h_cntr = 0; ppu.h_cntr < PPU_SCREEN_WIDTH; ppu.h_cntr++){
             PPU_dot(&ppu);
+            cycle_cpu(cpu);
         }
         cpu->IRQ = 1;//H_blank
+        for(uint16_t i = 0; i < 350; i++){
+            cycle_cpu(cpu);
+        }
     }
     cpu->IRQ = 1;//V_blank
+    for(uint16_t i = 0; i < 3500; i++){
+        cycle_cpu(cpu);
+    }
 }
