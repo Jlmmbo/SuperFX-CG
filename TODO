@@ -1,13 +1,17 @@
-- Memory mapping
+- Memory mapped hardware:
+    - ram
+    - controller
+    - ppu regs
+    - apu regs ??
+    - expansion ??
 - properly handle/set P.V
 - peripherals:
     - ppu
     - screen
-    - audio
+    - audio ??
     - controller
     - other memory mapped peripherals
 - GUI
-- rom mapping (for mirrored banks, just set the pointer to the same memory region)
 - bgn_px = wrong thing !! deal w/ bitplanes
 - different bg modes
 - different bpp modes(currently only 4bpp)
@@ -16,3 +20,4 @@
 - use macros to simplify instruction functions ?????
 - imporve byte_to_str
 - use timers to call ppu_dot and cycle_cpu (make sure to uninstall them before fs stuff and on exit)
+- possible (dangerous): for rom file, use ptr instead of handle to bypass 1mb read_file_os hang

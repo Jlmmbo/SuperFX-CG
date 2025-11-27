@@ -56,18 +56,62 @@ address add_addr(address addr, uint16_t amt){
     return (address){final_addr % 65536, final_addr / 65536};
 }
 
-/*
-stub.
-Will write rom to proper memory banks/regions, 
-and allocate used non-rom banks (e.g. ram, sram, i/o &c.)*/
-char write_rom(CPUState* cpu, Rom rom){
-    cpu->rom_mode = 0x00;
-    for (byte bank = 0; bank<0xFF; bank++){
-        ;
+
+address mem_get_addr(address addr, byte rom_mode){
+    if(rom_mode == 0){//LoROM
+        addr.addr %= 32768;//ignore high bit of addr
+        addr.bank %= 128;//ignore high bit of bank
+        return addr;
+    } else if(rom_mode == 1){//HiROM
+        addr.bank %= 64;//ignore highest 2 bits of bank
+    } else if(rom_mode == 5){
+        addr.bank = (addr.bank % 64) + (addr.bank >> 7) * 128;
     }
+    return addr;
+}
+
+/*Fetch memory from address in bank.
+ If bank has not already been allocated, calls sys_realloc(bank)*/
+byte mem_fetch(CPUState* cpu, address addr){
+    addr = mem_get_addr(addr, cpu->rom_mode);
+    if(cpu->mem[addr.bank]==NULL){
+        sys_realloc(cpu->mem[addr.bank], 65536 * sizeof(byte));
+    }
+    return cpu->mem[addr.bank][addr.addr];
+}
+
+/*set memory at address in bank.
+ If bank has not already been allocated, will call sys_realloc(bank)*/
+char mem_set(CPUState* cpu, byte value, address addr){
+    addr = mem_get_addr(addr, cpu->rom_mode);
+    if(cpu->mem[addr.bank]==NULL){
+        sys_realloc(cpu->mem[addr.bank], 65536 * sizeof(byte));
+    }
+    cpu->mem[addr.bank][addr.addr] = value;
+    //ppu regs at 2100-213f: also set cpu->ppu.-----
+    //no need to allocate certain banks, since they are mirrors, so you can just read/write those
     return 0;
 }
 
+/*
+Will write rom to proper memory banks/regions, 
+and allocate used non-rom banks (e.g. ram, sram, i/o &c.)
+also mirror proper banks*/
+char write_rom(CPUState* cpu, Rom rom){
+    cpu->rom_mode = 0x00;
+    int rom_offset = 0;
+
+    for (int bank = 0x00; bank <= 0x7D; bank++) {
+        for (int i = 0x8000; i <= 0xFFFF; i++) {
+            if (rom_offset < rom.size) {
+                cpu->mem[bank][i] = rom.raw[rom_offset++];
+            } else {
+                cpu->mem[bank][i] = 0xFF;  // open bus
+            }
+        }
+    }
+    return 0;
+}
 
 Rom test_rom = {(byte[]){0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA}, 8};//a bunch of NOPs
 
@@ -99,30 +143,6 @@ void init_cpu(CPUState* cpu, Rom rom){
         PrintXY(1, 1, "  GET MORE SPACE!!", 0, 0);
     }
 }
-
-
-
-/*Fetch memory from address in bank.
- If bank has not already been allocated, calls sys_realloc(bank)*/
-byte mem_fetch(CPUState* cpu, address addr){
-    if(cpu->mem[addr.bank]==NULL){
-        sys_realloc(cpu->mem[addr.bank], 65536 * sizeof(byte));
-    }
-    return cpu->mem[addr.bank][addr.addr];
-}
-
-/*set memory at address in bank.
- If bank has not already been allocated, will call sys_realloc(bank)*/
-char mem_set(CPUState* cpu, byte value, address addr){
-    if(cpu->mem[addr.bank]==NULL){
-        sys_realloc(cpu->mem[addr.bank], 65536 * sizeof(byte));
-    }
-    cpu->mem[addr.bank][addr.addr] = value;
-    //ppu regs at 2100-213f: also set cpu->ppu.-----
-    //no need to allocate certain banks, since they are mirrors, so you can just read/write those
-    return 0;
-}
-
 
 //absolute
 address a(CPUState* cpu){
