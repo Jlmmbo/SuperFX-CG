@@ -227,7 +227,7 @@ Rom main_menu_ui(int keybinds[12]){
                      keybinds[11] = map_key_ui("  SELECT");
                      break;
                   case 1://brightness
-                     list_menu_ui("Brightness", (char*[]){"  Ultra low", "  Low", "  Medium", "  High", "  Very high"}, 3);
+                     list_menu_ui("  Brightness", (char*[]){"  Ultra low", "  Low", "  Medium", "  High", "  Very high"}, 3);
                      //placeholder
                      break;
                   case 2://frameskip
@@ -247,18 +247,17 @@ Rom main_menu_ui(int keybinds[12]){
 
       //load ROM
       char** rom_selection_list = NULL;// char ** -> a string list
-      get_rom_list_fs(rom_selection_list);
-      //placeholder
-      //uncomment when load_rom_fs is implemented
-      // Rom selected_rom = load_rom_fs(list_menu_ui("  SELECT ROM", rom_selection_list, sizeof(rom_selection_list)/sizeof(rom_selection_list[0])));
-         
+      byte rom_list_len;
+      get_rom_list_fs(rom_selection_list, &rom_list_len);
+      Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("  SELECT ROM", rom_selection_list, rom_list_len));
+
       if (keydownlast(KEY_CTRL_EXIT)){
          PrintXY(1, 1, "  Press MENU to exit", TEXT_MODE_NORMAL, TEXT_COLOR_BLACK);
          int k;
-         GetKey(&k);
+         GetKey(&k);//allow the user to press menu and go to the menu
       }
       if (keydownlast(KEY_CTRL_EXE)){
-         return test_rom;
+         return selected_rom;
       }
    }
    return test_rom;
