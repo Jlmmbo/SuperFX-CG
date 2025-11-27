@@ -16,3 +16,4 @@
 - a better way to deal with 8/16 bit values when in native/emulation mode
 - use macros to simplify instruction functions ?????
 - imporve byte_to_str
+- add cpu time during v/h blank

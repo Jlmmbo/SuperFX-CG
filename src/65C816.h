@@ -80,6 +80,7 @@ void init_cpu(CPUState* cpu, Rom rom){
     }
     cpu->expected_time = RTC_GetTicks();
     cpu->current_time = RTC_GetTicks();
+    cpu->E = 1;
     cpu->D = 0x0000;
     cpu->DBR = 0x00;
     cpu->PBR = 0x00;
@@ -996,7 +997,6 @@ void CMP(CPUState* cpu, address addr){
 
 //REset P bits
 void REP(CPUState* cpu, address addr){
-    //mem_set(cpu, (val ^ cpu->C.l) & val, addr);
     if (cpu->P.M == 0){//16-bit
         byte P_byte = status_to_byte(cpu->P);
         cpu->P = byte_to_status(((P_byte ^ mem_fetch(cpu, addr)) & P_byte));
@@ -1079,6 +1079,119 @@ void PHX(CPUState* cpu, address addr){
 //SToP the clock
 void STP(CPUState* cpu, address addr){
     while (cpu->RES);
+}
+
+//
+void CPX(CPUState* cpu, address addr){
+    if(cpu->P.X == 0){//16-bit
+        uint16_t val = cpu->X - mem_fetch(cpu, addr);
+        cpu->P.Z = val == 0;
+        cpu->P.N = val >> 15;
+        cpu->P.E = val <= cpu->X;
+        return;
+    }
+    byte val = cpu->X - mem_fetch(cpu, addr);
+    cpu->P.Z = val == 0;
+    cpu->P.N = val >> 7;
+    cpu->P.E = val <= cpu->X;
+}
+
+//
+void SBC(CPUState* cpu, address addr){
+    if(cpu->P.M == 0){//16-bit
+        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        cpu->C = separate_bytes(v - bytes_to_int(cpu->C.h, cpu->C.l));
+        cpu->P.N = cpu->C.h >> 7;
+        cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
+        return;
+    }
+    byte v = mem_fetch(cpu, addr);
+    cpu->C.l = cpu->C.l - v;
+    cpu->P.N = cpu->C.l >> 7;
+    cpu->P.Z = cpu->C.l == 0;
+}
+
+//
+void SEP(CPUState* cpu, address addr){
+    if (cpu->P.M == 0){//16-bit
+        byte P_byte = status_to_byte(cpu->P);
+        cpu->P = byte_to_status(P_byte | mem_fetch(cpu, addr));
+        return;
+    }
+    byte P_byte = status_to_byte(cpu->P);
+    cpu->P = byte_to_status((P_byte | mem_fetch(cpu, addr)) & P_byte & 0b11001111);//can't change M or X flags if in emulation mode
+}
+
+//
+void INC(CPUState* cpu, address addr){
+    uint16_t val;
+    if (cpu->P.X == 0){//16-bit
+        val = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) + 1;
+        cpu->P.N = cpu->Y >> 15;
+        mem_set(cpu, val % 65536, addr);
+        mem_set(cpu, val / 65536, inc_addr(addr));
+    } else {
+        val = mem_fetch(cpu, addr) + 1;
+        cpu->P.N = cpu->Y >> 7;
+    }
+    cpu->P.Z = val == 0;
+}
+
+//INcrement X
+void INX(CPUState* cpu, address addr){
+    if (cpu->P.X == 0){//16-bit
+        cpu->X++;
+        cpu->P.N = cpu->X >> 15;
+    } else {
+        cpu->X = (cpu->X / 256) + ((cpu->X % 256) + 1);
+        cpu->P.N = cpu->X >> 7;
+    }
+    cpu->P.Z = cpu->X == 0;
+}
+
+//No OPeration
+void NOP(CPUState* cpu, address addr){
+    //
+}
+
+//eXchange B and A
+void XBA(CPUState* cpu, address addr){
+    byte temp = cpu->C.h;
+    cpu->C.h = cpu->C.l;
+    cpu->C.l = temp;
+}
+
+//Branch if EQual
+void BEQ(CPUState* cpu, address addr){
+    char offset = mem_fetch(cpu, addr);
+    if(cpu->P.Z == 1){
+        cpu->PC = cpu->PC + (offset - 128);
+        return;
+    }
+    cpu->PC++;
+}
+
+//Push Effective Address
+void PEA(CPUState* cpu, address addr){
+    push(cpu, mem_fetch(cpu, inc_addr(addr)));
+    push(cpu, mem_fetch(cpu, addr));
+}
+
+//SEt Decimal flag
+void SED(CPUState* cpu, address addr){
+    cpu->P.D = 1;
+}
+
+//
+void PLX(CPUState* cpu, address addr){
+    cpu->X = pull(cpu) + pull(cpu) * 256;
+}
+
+//
+void XCE(CPUState* cpu, address addr){
+    byte temp = cpu->P.E;
+    cpu->P.E = cpu->E;
+    cpu->E = temp;
 }
 
 const instr_data instructions[] = {
@@ -1319,24 +1432,41 @@ const instr_data instructions[] = {
     {ax, 4, 3, CMP},
     {ax, 7, 3, DEC},
     {alx, 5, 4, CMP},
-    /*
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    */
+
+    {imm, 2, 2, CPX},
+    {dxi, 6, 2, SBC},
+    {imm, 3, 2, SEP},
+    {ds, 4, 2, SBC},
+    {d, 3, 2, CPX},
+    {d, 3, 2, SBC},
+    {d, 5, 2, INC},
+    {dli, 6, 2, SBC},
+    {nil, 2, 1, INX},
+    {imm, 2, 2, SBC},
+    {nil, 2, 1, NOP},
+    {nil, 3, 1, XBA},
+    {a, 4, 3, CPX},
+    {a, 4, 3, SBC},
+    {a, 6, 3, INC},
+    {al, 5, 4, SBC},
+    
+    {r, 2, 2, BEQ},
+    {diy, 5, 2, SBC},
+    {di, 5, 2, SBC},
+    {dsiy, 7, 2, SBC},
+    {imm, 5, 3, PEA},
+    {dx, 4, 2, SBC},
+    {dx, 6, 2, INC},
+    {dliy, 6, 2, SBC},
+    {nil, 2, 1, SED},
+    {ay, 4, 3, SBC},
+    {s, 4, 1, PLX},
+    {nil, 2, 1, XCE},
+    {axi, 8, 3, JSR},
+    {ax, 4, 3, SBC},
+    {ax, 7, 3, INC},
+    {alx, 5, 4, SBC},
+    
 };
 
 /*run instruction

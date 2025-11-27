@@ -30,7 +30,7 @@ two_bytes separate_bytes(uint16_t n){
 
 //converts a two_bytes into an uint16_t
 uint16_t two_bytes_to_int(two_bytes b){
-    return (uint16_t)(b.h*255+b.l);
+    return (uint16_t)(b.h*256+b.l);
 }
 
 //add two 16-bit values
@@ -41,7 +41,7 @@ two_bytes add_2_2(two_bytes a, two_bytes b){
 
 //add a 16- and an 8- bit value
 two_bytes add_2_1(two_bytes a, byte b){
-    unsigned ans = ((a.h * 256 + a.l) + b) % 65535;
+    unsigned ans = ((a.h * 256 + a.l) + b) % 65536;
     return (two_bytes){ans & 0xFF00, ans & 0x00FF};
 }
 
@@ -53,11 +53,11 @@ two_bytes sub_2_2(two_bytes a, two_bytes b){
 
 //subtract a 16- and an 8- bit value
 two_bytes sub_2_1(two_bytes a, byte b){
-    unsigned ans = ((a.h * 256 + a.l) - b) % 65535;
+    unsigned ans = ((a.h * 256 + a.l) - b) % 65536;
     return (two_bytes){ans & 0xFF00, ans & 0x00FF};
 }
 
 //convert two byte values into a single uint16_t
 uint16_t bytes_to_int(byte a, byte b){
-    return (uint16_t)(a*255+b);
+    return (uint16_t)(a*256+b);
 }
