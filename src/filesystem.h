@@ -9,6 +9,7 @@ Rom load_rom_fs(char** rom_list, byte rom_index){//bad news: may not even work f
     unsigned short file_name[50];
     Bfile_StrToName_ncpy(file_name, rom_list[rom_index], 49);
     int handle = Bfile_OpenFile_OS(file_name, 0, 0);
+    if(handle < 0) return test_rom;
     Rom rom;
     rom.size = Bfile_GetFileSize_OS(handle);
     rom.raw = NULL;//just to get the compiler to shut up about using rom.raw uninitialized
