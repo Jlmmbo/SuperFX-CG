@@ -253,7 +253,9 @@ Rom main_menu_ui(int keybinds[12]){
       // Rom selected_rom = load_rom_fs(list_menu_ui("  SELECT ROM", rom_selection_list, sizeof(rom_selection_list)/sizeof(rom_selection_list[0])));
          
       if (keydownlast(KEY_CTRL_EXIT)){
-         //Exits the emulator
+         PrintXY(1, 1, "  Press MENU to exit", TEXT_MODE_NORMAL, TEXT_COLOR_BLACK);
+         int k;
+         GetKey(&k);
       }
       if (keydownlast(KEY_CTRL_EXE)){
          return test_rom;
