@@ -9,7 +9,6 @@
     - ppu
     - screen
     - audio ??
-    - controller
     - other memory mapped peripherals
 - GUI
 - bgn_px = wrong thing !! deal w/ bitplanes
@@ -21,3 +20,4 @@
 - imporve byte_to_str
 - use timers to call ppu_dot and cycle_cpu (make sure to uninstall them before fs stuff and on exit)
 - possible (dangerous): for rom file, use ptr instead of handle to bypass 1mb read_file_os hang
+- fix keybind ui

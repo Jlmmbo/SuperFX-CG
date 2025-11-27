@@ -213,18 +213,18 @@ Rom main_menu_ui(int keybinds[12]){
             unsigned char option = list_menu_ui("  Settings", (char*[]){"  Keybinds", "  Brightness", "  Frameskip", "  Colour Palette"}, 4);
             switch(option){
                   case 0://keybinds
-                     keybinds[0] = map_key_ui("  D-UP");
-                     keybinds[1] = map_key_ui("  D-DOWN");
-                     keybinds[2] = map_key_ui("  D-LEFT");
-                     keybinds[3] = map_key_ui("  D-RIGHT");
-                     keybinds[4] = map_key_ui("  A");
-                     keybinds[5] = map_key_ui("  B");
-                     keybinds[6] = map_key_ui("  X");
-                     keybinds[7] = map_key_ui("  Y");
-                     keybinds[8] = map_key_ui("  L");
-                     keybinds[9] = map_key_ui("  R");
-                     keybinds[10] = map_key_ui("  START");
-                     keybinds[11] = map_key_ui("  SELECT");
+                     keybinds[4] = map_key_ui("  D-UP");
+                     keybinds[5] = map_key_ui("  D-DOWN");
+                     keybinds[6] = map_key_ui("  D-LEFT");
+                     keybinds[7] = map_key_ui("  D-RIGHT");
+                     keybinds[8] = map_key_ui("  A");
+                     keybinds[0] = map_key_ui("  B");
+                     keybinds[9] = map_key_ui("  X");
+                     keybinds[1] = map_key_ui("  Y");
+                     keybinds[10] = map_key_ui("  L");
+                     keybinds[11] = map_key_ui("  R");
+                     keybinds[3] = map_key_ui("  START");
+                     keybinds[2] = map_key_ui("  SELECT");
                      break;
                   case 1://brightness
                      list_menu_ui("  Brightness", (char*[]){"  Ultra low", "  Low", "  Medium", "  High", "  Very high"}, 3);

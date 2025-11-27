@@ -1512,3 +1512,22 @@ void cycle_cpu(CPUState* cpu){
         cpu->current_time = RTC_GetTicks();
     }
 }
+
+void update_controller_register(CPUState* cpu, int keybinds[12]){
+    cpu->mem[00][0x4218] = (
+    keydownlast(keybinds[0]) << 7 |//b
+    keydownlast(keybinds[1]) << 6 |//y
+    keydownlast(keybinds[2]) << 5 |//select
+    keydownlast(keybinds[3]) << 4 |//start
+    keydownlast(keybinds[4]) << 3 |//D-UP
+    keydownlast(keybinds[5]) << 2 |//D-DOWN
+    keydownlast(keybinds[6]) << 1 |//D-LEFT
+    keydownlast(keybinds[7]) << 0 //D-RIGHT
+    );
+    cpu->mem[00][0x4219] = (
+    keydownlast(keybinds[8]) << 7 |//A
+    keydownlast(keybinds[9]) << 6 |//X
+    keydownlast(keybinds[10]) << 5 |//L
+    keydownlast(keybinds[11]) << 4 //R
+    );
+}
