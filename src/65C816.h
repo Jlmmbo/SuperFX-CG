@@ -71,21 +71,21 @@ address mem_get_addr(address addr, byte rom_mode){
 }
 
 /*Fetch memory from address in bank.
- If bank has not already been allocated, calls sys_realloc(bank)*/
+ If bank has not already been allocated, calls sys_malloc()*/
 byte mem_fetch(CPUState* cpu, address addr){
     addr = mem_get_addr(addr, cpu->rom_mode);
     if(cpu->mem[addr.bank]==NULL){
-        sys_realloc(cpu->mem[addr.bank], 65536 * sizeof(byte));
+        cpu->mem[addr.bank] = sys_malloc(65536 * sizeof(byte));
     }
     return cpu->mem[addr.bank][addr.addr];
 }
 
 /*set memory at address in bank.
- If bank has not already been allocated, will call sys_realloc(bank)*/
+ If bank has not already been allocated, will call sys_malloc()*/
 char mem_set(CPUState* cpu, byte value, address addr){
     addr = mem_get_addr(addr, cpu->rom_mode);
     if(cpu->mem[addr.bank]==NULL){
-        sys_realloc(cpu->mem[addr.bank], 65536 * sizeof(byte));
+        cpu->mem[addr.bank] = sys_malloc(65536 * sizeof(byte));
     }
     cpu->mem[addr.bank][addr.addr] = value;
     //ppu regs at 2100-213f: also set cpu->ppu.-----
