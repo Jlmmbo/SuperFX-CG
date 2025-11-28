@@ -126,26 +126,39 @@ void init_cpu(CPUState* cpu, Rom rom){
     for (int i = 0; i < 256; i++){
         cpu->mem[i] = NULL;
     }
+
     cpu->expected_time = RTC_GetTicks();
     cpu->current_time = RTC_GetTicks();
+    
     cpu->E = 1;
+    
     cpu->D = 0x0000;
+    
     cpu->DBR = 0x00;
     cpu->PBR = 0x00;
+    
     cpu->S.h = 0x01;
+    
     cpu->X &= 0x0011;
     cpu->Y &= 0x0011;
+    
     cpu->P.M = 1;
     cpu->P.X = 1;
     cpu->P.D = 0;
     cpu->P.I = 1;
     cpu->P.E = 1;//set to emulation mode
+    
     cpu->PC = cpu->mem[0][0xFFFD] * 256 + cpu->mem[0][0xFFFC];
+    
     char err = write_rom(cpu, rom);
     if (err){//failed to allocate
         Bdisp_AllClr_VRAM();
         PrintXY(1, 1, "  GET MORE SPACE!!", 0, 0);
     }
+
+    cpu->ppu.h_cntr = 0;
+    cpu->ppu.v_cntr = 0;
+    cpu->ppu.VRAM = (uint16_t*)&(cpu->mem[0x00][VMADDH * 256 + VMADDL]);
 }
 
 //absolute

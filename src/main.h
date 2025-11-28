@@ -7,6 +7,71 @@
 #define true (1)
 #define false (0)
 
+#define INIDISP (cpu->mem[0x00][0x2100])
+#define OBJSEL (cpu->mem[0x00][0x2101])
+#define OAMADDL (cpu->mem[0x00][0x2102])
+#define OAMADDH (cpu->mem[0x00][0x2103])
+#define OAMDATA (cpu->mem[0x00][0x2104])
+#define BGMODE (cpu->mem[0x00][0x2105])
+#define MOSAIC (cpu->mem[0x00][0x2106])
+#define BG1SC (cpu->mem[0x00][0x2107])
+#define BG2SC (cpu->mem[0x00][0x2108])
+#define BG3SC (cpu->mem[0x00][0x2109])
+#define BG4SC (cpu->mem[0x00][0x210a])
+#define BG12NBA (cpu->mem[0x00][0x210b])
+#define BG34NBA (cpu->mem[0x00][0x210c])
+#define BG1HOFS (cpu->mem[0x00][0x210d])
+#define BG1VOFS (cpu->mem[0x00][0x210e])
+#define BG2HOFS (cpu->mem[0x00][0x210f])
+#define BG2VOFS (cpu->mem[0x00][0x2110])
+#define BG3HOFS (cpu->mem[0x00][0x2111])
+#define BG3VOFS (cpu->mem[0x00][0x2112])
+#define BG4HOFS (cpu->mem[0x00][0x2113])
+#define BG4VOFS (cpu->mem[0x00][0x2114])
+#define VMAIN (cpu->mem[0x00][0x2115])
+#define VMADDL (cpu->mem[0x00][0x2116])
+#define VMADDH (cpu->mem[0x00][0x2117])
+#define VMDATAL (cpu->mem[0x00][0x2118])
+#define VMDATAH (cpu->mem[0x00][0x2119])
+#define M7SEL (cpu->mem[0x00][0x211a])
+#define M7A (cpu->mem[0x00][0x211b])
+#define M7B (cpu->mem[0x00][0x211c])
+#define M7C (cpu->mem[0x00][0x211d])
+#define M7D (cpu->mem[0x00][0x211e])
+#define M7X (cpu->mem[0x00][0x211f])
+#define M7Y (cpu->mem[0x00][0x2120])
+#define CGADD (cpu->mem[0x00][0x2121])
+#define CGDATA (cpu->mem[0x00][0x2122])
+#define W12SEL (cpu->mem[0x00][0x2123])
+#define W34SEL (cpu->mem[0x00][0x2124])
+#define WOBJSEL (cpu->mem[0x00][0x2125])
+#define WH0 (cpu->mem[0x00][0x2126])
+#define WH1 (cpu->mem[0x00][0x2127])
+#define WH2 (cpu->mem[0x00][0x2128])
+#define WH3 (cpu->mem[0x00][0x2129])
+#define WBGLOG (cpu->mem[0x00][0x212a])
+#define WOBJLOG (cpu->mem[0x00][0x212b])
+#define TM (cpu->mem[0x00][0x212c])
+#define TS (cpu->mem[0x00][0x212d])
+#define TMW (cpu->mem[0x00][0x212e])
+#define TSW (cpu->mem[0x00][0x212f])
+#define CGWSEL (cpu->mem[0x00][0x2130])
+#define CGADSUB (cpu->mem[0x00][0x2131])
+#define COLDATA (cpu->mem[0x00][0x2132])
+#define SETINI (cpu->mem[0x00][0x2133])
+#define MPYL (cpu->mem[0x00][0x2134])
+#define MPYM (cpu->mem[0x00][0x2135])
+#define MPYH (cpu->mem[0x00][0x2136])
+#define SLHV (cpu->mem[0x00][0x2137])
+#define OAMDATAREAD (cpu->mem[0x00][0x2138])
+#define VMDATALREAD (cpu->mem[0x00][0x2139])
+#define VMDATAHREAD (cpu->mem[0x00][0x213a])
+#define CGDATAREAD (cpu->mem[0x00][0x213b])
+#define OPHCT (cpu->mem[0x00][0x213c])
+#define OPVCT (cpu->mem[0x00][0x213d])
+#define STAT77 (cpu->mem[0x00][0x213e])
+#define STAT78 (cpu->mem[0x00][0x213f])
+
 void put_disp(void);
 
 const unsigned short* keyboard_register = (unsigned short*)0xA44B0000;
@@ -73,24 +138,7 @@ typedef struct Tile{
 typedef struct PPU{
     unsigned short h_cntr;//maybe fit into a byte
     unsigned short v_cntr;//maybe fit into a byte
-    //registers
-    byte BG1SC;
-    byte BG2SC;
-    byte BG3SC;
-    byte BG4SC;
-    byte BG1HOFS;
-    byte BG2HOFS;
-    byte BG3HOFS;
-    byte BG4HOFS;
-    byte BG1VOFS;
-    byte BG2VOFS;
-    byte BG3VOFS;
-    byte BG4VOFS;
-    byte BG12NBA;
-    byte BG34NBA;
-    byte BGCOLOR;
-    byte CGADD;
-    uint16_t VRAM[32768];
+    uint16_t* VRAM;
 }PPU;
 
 typedef struct CPUState{
