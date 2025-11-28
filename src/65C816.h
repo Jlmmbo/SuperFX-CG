@@ -98,7 +98,11 @@ Will write rom to proper memory banks/regions,
 and allocate used non-rom banks (e.g. ram, sram, i/o &c.)
 also mirror proper banks*/
 char write_rom(CPUState* cpu, Rom rom){
-    cpu->rom_mode = 0x00;
+    //cpu->rom_mode = 0x00;
+    if (rom.raw[0x007fc0] == 0) cpu->rom_mode = 0;//LoROM
+    else if (rom.raw[0x00ffc0] == 1) cpu->rom_mode = 1;//HiROM
+    else if (rom.raw[0x40ffc0] == 5) cpu->rom_mode = 5;//ExHiROM
+    else cpu->rom_mode = 0;//LoROM to be safe
     int rom_offset = 0;
 
     for (int bank = 0x00; bank <= 0x7D; bank++) {
