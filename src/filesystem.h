@@ -14,6 +14,7 @@ Rom load_rom_fs(char** rom_list, byte rom_index){//bad news: may not even work f
     rom.size = Bfile_GetFileSize_OS(handle);
     rom.raw = NULL;//just to get the compiler to shut up about using rom.raw uninitialized
     Bfile_ReadFile_OS(handle, rom.raw, rom.size, 0);
+    Bfile_CloseFile_OS(handle);
     return rom;
 }
 

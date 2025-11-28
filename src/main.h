@@ -1,6 +1,8 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "overclock.h"
+
 #define NON_BLOCK_DMA 1
 #define true (1)
 #define false (0)
@@ -122,6 +124,10 @@ typedef struct instr_data{
     byte read_bytes;//num of bytes read, includes opcode
     void (*instr_func)(CPUState*, address);//function to excecute instruction
 }instr_data;
+
+void quithandler(){
+    change_freq(PLL_16x);
+}
 
 #include "binary.h"
 #include "65C816.h"
