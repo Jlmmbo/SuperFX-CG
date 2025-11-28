@@ -10,15 +10,13 @@
     - other memory mapped peripherals
     - cartrige hardware:
         - coprocessors
-        - batteries
+        - battery backed ram
         - etc.
 - GUI
 - bgn_px = wrong thing !! deal w/ bitplanes
 - different bg modes
 - different bpp modes(currently only 4bpp)
-- overclock
 - a better way to deal with 8/16 bit values when in native/emulation mode
 - use macros to simplify instruction functions ?????
-- imporve byte_to_str
 - use timers to call ppu_dot and cycle_cpu (make sure to uninstall them before fs stuff and on exit)
 - possible (dangerous): for rom file, use ptr instead of handle to bypass 1mb read_file_os hang
