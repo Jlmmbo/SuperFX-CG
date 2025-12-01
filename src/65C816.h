@@ -148,13 +148,14 @@ void init_cpu(CPUState* cpu, Rom rom){
     cpu->P.I = 1;
     cpu->P.E = 1;//set to emulation mode
     
-    cpu->PC = cpu->mem[0][0xFFFD] * 256 + cpu->mem[0][0xFFFC];
-    
     char err = write_rom(cpu, rom);
     if (err){//failed to allocate
         Bdisp_AllClr_VRAM();
         PrintXY(1, 1, "  GET MORE SPACE!!", 0, 0);
     }
+
+    //cpu->PC = cpu->mem[0][0xFFFD] * 256 + cpu->mem[0][0xFFFC];
+    cpu->PC = mem_fetch(cpu, (address){0, 0xfffd}) * 256 + mem_fetch(cpu, (address){0, 0xfffc});
 
     cpu->ppu.h_cntr = 0;
     cpu->ppu.v_cntr = 0;

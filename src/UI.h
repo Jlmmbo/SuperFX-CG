@@ -64,15 +64,6 @@ void put_disp_strip(unsigned, unsigned);
    }
 #endif
 
-/// @brief display text of any reasonable size
-/// @param color TEXT_COLOR defined in display.h
-/// @param font_size size of the font to be displayed in px
-/// @param x The x coordinate (in pixels) of the upper left corner of the first character
-/// @param y The y coordinate (in pixels) of the upper left corner of the first character
-void display_text(char* text, char color, unsigned char font_size, int x, int y){
-    PrintCXY(x, y, text, TEXT_MODE_NORMAL, -1, TEXT_COLOR_BLACK, TEXT_COLOR_WHITE, 1, 0);
-}
-
 void CopySprite(color_t* sprite, int x, int y, int width, int height) {
    color_t* VRAM = (color_t*)GetVRAMAddress();
    VRAM += LCD_WIDTH_PX*y + x;
@@ -245,27 +236,15 @@ Rom main_menu_ui(int keybinds[12]){
             //load ROM
             char* rom_selection_list[] = {"                ","                ","                ","                "};
             byte rom_list_len;
-            Bdisp_AllClr_VRAM();
-            PrintXY(1, 1, "  3", 0, 0);
-            GetKey(NULL);
             get_rom_list_fs(rom_selection_list, &rom_list_len);
-            /*
-            Bdisp_PutDisp_DD();
-            Bdisp_AllClr_VRAM();
-            PrintXY(1, 1, "  4", 0, 0);
-            Bdisp_PutDisp_DD();
             Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("  SELECT ROM", rom_selection_list, rom_list_len + 1));
-            Bdisp_AllClr_VRAM();
-            PrintXY(1, 1, "  5", 0, 0);
-            Bdisp_PutDisp_DD();*/
-            break;
-            //return selected_rom;
+            return selected_rom;
          }
          case 2:{
             Bdisp_AllClr_VRAM();
             PrintXY(1, 1, "  Press MENU to exit", TEXT_MODE_NORMAL, TEXT_COLOR_BLACK);
             int k;
-            GetKey(&k);//allow the user to press menu and go to the menu
+            GetKey(&k);
             break;
          }
       }

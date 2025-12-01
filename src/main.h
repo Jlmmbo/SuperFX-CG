@@ -3,7 +3,7 @@
 
 #include "overclock.h"
 
-#define NON_BLOCK_DMA 1
+//#define NON_BLOCK_DMA 1
 #define true (1)
 #define false (0)
 
