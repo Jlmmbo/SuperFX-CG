@@ -26,16 +26,17 @@ void get_rom_list_fs(char** rom_list, byte* len){
     file_type_t* fileinfo = NULL;
     
     int err = Bfile_FindFirst("\\\\fls0\\*.sfc", &FindHandle, FoundFile, fileinfo);//if the file is larger that 2mb, too bad... :(
-    if (err == -16){
+    if (err < 0){
         PrintXY(1, 1, "  No Roms", 0, TEXT_COLOR_BLACK);
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
+        return;
     }
 
     int i = 0;
     while (1){
         int err = Bfile_FindNext(FindHandle, FoundFile, fileinfo);
-        if (err == -16){// no more files
+        if (err < 0){// no more files
             break;
         }
         rom_list[i] = FoundFile;
@@ -44,4 +45,5 @@ void get_rom_list_fs(char** rom_list, byte* len){
     }
 
     Bfile_FindClose(FindHandle);
+
 }

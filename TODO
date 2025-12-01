@@ -4,7 +4,7 @@
 - properly handle/set P.V
 - peripherals:
     - ppu:
-        - add a buffer that will contain last scanlines tile indexes to check first. remove the ones that are no longer on the scanline
+        - add a buffer that will contain last scanlines' tile indexes to check first. remove the ones that are no longer on the scanline
     - screen
     - audio ??
     - other memory mapped peripherals
@@ -13,6 +13,9 @@
         - battery backed ram
         - etc.
 - GUI
+    - Backrounds
+    - fonts
+    - 
 - bgn_px = wrong thing !! deal w/ bitplanes
 - different bg modes
 - different bpp modes(currently only 4bpp)
