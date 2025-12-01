@@ -20,10 +20,9 @@ void put_disp_strip(unsigned, unsigned);
    #define DMA0_DAR_0  (volatile unsigned*)0xFE008024
    #define DMA0_TCR_0  (volatile unsigned*)0xFE008028
    #define DMA0_CHCR_0 (volatile unsigned*)0xFE00802C
-
    void DmaWaitNext(void){
       while(1){
-         if((*DMA0_DMAOR)&4)//Address error has occurred; stop looping
+         if((*DMA0_DMAOR)&4)//Address error has occurred stop looping
                break;
          if((*DMA0_CHCR_0)&2)//Transfer is done
                break;
@@ -32,9 +31,8 @@ void put_disp_strip(unsigned, unsigned);
       *DMA0_CHCR_0&=~1;
       *DMA0_DMAOR=0;
    }
-
    void put_disp_strip(unsigned y1,unsigned y2){
-      DmaWaitNext();//make sure no ongoing transfer is already happening
+      DmaWaitNext();
       Bdisp_WriteDDRegister3_bit7(1);
       Bdisp_DefineDMARange(6,389,y1,y2);
       Bdisp_DDRegisterSelect(LCD_GRAM);
@@ -42,13 +40,16 @@ void put_disp_strip(unsigned, unsigned);
       *MSTPCR0&=~(1<<21);//Clear bit 21
       *DMA0_CHCR_0&=~1;//Disable DMA on channel 0
       *DMA0_DMAOR=0;//Disable all DMA
-      *DMA0_SAR_0=((unsigned int)GetVRAMAddress()+(y1*384*2))&0x1FFFFFFF;//Source address is VRAM
+      *DMA0_SAR_0=(GetVRAMAddress()+(y1*384*2))&0x1FFFFFFF;//Source address is VRAM
       *DMA0_DAR_0=LCD_BASE&0x1FFFFFFF;//Destination is LCD
       *DMA0_TCR_0=((y2-y1+1)*384)/16;//Transfer count bytes/32
       *DMA0_CHCR_0=0x00101400;
       *DMA0_DMAOR|=1;//Enable DMA on all channels
       *DMA0_DMAOR&=~6;//Clear flags
       *DMA0_CHCR_0|=1;//Enable channel0 DMA
+   }
+   void DoDMAlcdNonblock(void){
+      DoDMAlcdNonblockStrip(0,215);
    }
 
    void put_disp(void){
@@ -195,8 +196,6 @@ unsigned char list_menu_ui(char* title, char* options[], unsigned char option_co
 
 void settings_menu_ui(int keybinds[12]){
    //settings
-   Bdisp_AllClr_VRAM();
-   PrintXY(1,2, "  Settings", 0, 0);
    unsigned char option = list_menu_ui("  Settings", (char*[]){"  Keybinds", "  Brightness", "  Frameskip", "  Colour Palette"}, 4);
    switch(option){
       case 0://keybinds
@@ -237,6 +236,11 @@ Rom main_menu_ui(int keybinds[12]){
             char* rom_selection_list[] = {"                ","                ","                ","                "};
             byte rom_list_len;
             get_rom_list_fs(rom_selection_list, &rom_list_len);
+            if(rom_selection_list == NULL || rom_list_len == 0){
+               Bdisp_AllClr_VRAM();
+               PrintXY(1, 1, "  No Roms", 0, 0);
+               GetKey(NULL);
+            }
             Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("  SELECT ROM", rom_selection_list, rom_list_len + 1));
             return selected_rom;
          }
@@ -252,17 +256,11 @@ Rom main_menu_ui(int keybinds[12]){
    return test_rom;
 }
 
-void pause_menu_ui(CPUState* cpu){
-    while (1){
-        keyupdate();
-        put_disp();
-
-        PrintXY(1, 1, "  Paused", 0, TEXT_COLOR_BLACK);
-
-        if(keydownlast(KEY_CTRL_EXIT)){
-            break;
-        }
-    }
+void pause_menu_ui(){
+   int k;
+   Bdisp_AllClr_VRAM();
+   PrintXY(1, 1, "  Paused", 0, TEXT_COLOR_BLACK);
+   GetKey(&k);
 }
 
 

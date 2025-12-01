@@ -108,17 +108,17 @@ char write_rom(CPUState* cpu, Rom rom){
     for (int bank = 0x00; bank <= 0x7D; bank++) {
         for (int i = 0x8000; i <= 0xFFFF; i++) {
             if (rom_offset < rom.size) {
-                cpu->mem[bank][i] = rom.raw[rom_offset++];
-            } else {
-                cpu->mem[bank][i] = 0xFF;  // open bus
+                //cpu->mem[bank][i] = rom.raw[rom_offset++];
+                mem_set(cpu, rom.raw[rom_offset++], (address){bank, i});
+            //} else {
+                //cpu->mem[bank][i] = 0xFF;  // open bus
             }
         }
     }
     return 0;
 }
 
-Rom test_rom = {(byte[]){0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA, 0xEA}, 8};//a bunch of NOPs
-
+Rom test_rom = {(byte[4096]){0x00}, 4096};
 
 
 /*start up cpu, initialize regs, set load interrupt vector etc.*/
@@ -127,9 +127,6 @@ void init_cpu(CPUState* cpu, Rom rom){
         cpu->mem[i] = NULL;
     }
 
-    cpu->expected_time = RTC_GetTicks();
-    cpu->current_time = RTC_GetTicks();
-    
     cpu->E = 1;
     
     cpu->D = 0x0000;
@@ -1546,7 +1543,6 @@ const instr_data instructions[] = {
     {ax, 4, 3, SBC},
     {ax, 7, 3, INC},
     {alx, 5, 4, SBC},
-    
 };
 
 /*run instruction
@@ -1562,15 +1558,11 @@ char run_instr_cpu(CPUState* cpu){
     address addr = instruction.addr_func(cpu);
     instruction.instr_func(cpu, addr);
     cpu->PC += instruction.read_bytes;
-    cpu->expected_time += instruction.cycle_count * CYCLE_TIME;
     return 0;
 }
 
 void cycle_cpu(CPUState* cpu){
     run_instr_cpu(cpu);
-    while(cpu->current_time < cpu->expected_time){//if ahead, wait
-        cpu->current_time = RTC_GetTicks();
-    }
 }
 
 void update_controller_register(CPUState* cpu, int keybinds[12]){
@@ -1590,4 +1582,5 @@ void update_controller_register(CPUState* cpu, int keybinds[12]){
     keydownlast(keybinds[10]) << 5 |//L
     keydownlast(keybinds[11]) << 4 //R
     );
+    if(keydownlast(KEY_CTRL_MENU)) pause_menu_ui();
 }

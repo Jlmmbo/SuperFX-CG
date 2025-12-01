@@ -24,10 +24,45 @@ void get_rom_list_fs(char** rom_list, byte* len){
     int FindHandle;
     char* FoundFile = NULL;
     file_type_t* fileinfo = NULL;
+
+    unsigned short pathname[0x100];
+    Bfile_StrToName_ncpy(pathname, "\\\\fls0\\*.sfc", 0x50);
     
-    int err = Bfile_FindFirst("\\\\fls0\\*.sfc", &FindHandle, FoundFile, fileinfo);//if the file is larger that 2mb, too bad... :(
-    if (err < 0){
+    int err = Bfile_FindFirst(pathname, &FindHandle, FoundFile, fileinfo);//if the file is larger that 2mb, too bad... :(
+    Bdisp_AllClr_VRAM();
+    PrintXY(1, 1, "  hi", 0, TEXT_COLOR_BLACK);
+    GetKey(NULL);
+    if (err == -5){
+        Bdisp_AllClr_VRAM();
+        PrintXY(1, 1, "  bad pref", 0, TEXT_COLOR_BLACK);
+        GetKey(NULL);
+        rom_list = NULL;
+        Bfile_FindClose(FindHandle);
+        return;
+    }
+
+    if (err == -1){
+        Bdisp_AllClr_VRAM();
+        PrintXY(1, 1, "  bad name", 0, TEXT_COLOR_BLACK);
+        GetKey(NULL);
+        rom_list = NULL;
+        Bfile_FindClose(FindHandle);
+        return;
+    }
+
+    if (err == -16){
+        Bdisp_AllClr_VRAM();
         PrintXY(1, 1, "  No Roms", 0, TEXT_COLOR_BLACK);
+        GetKey(NULL);
+        rom_list = NULL;
+        Bfile_FindClose(FindHandle);
+        return;
+    }
+
+    if (err == 0){
+        Bdisp_AllClr_VRAM();
+        PrintXY(1, 1, "  found", 0, TEXT_COLOR_BLACK);
+        GetKey(NULL);
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
         return;

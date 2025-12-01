@@ -138,6 +138,10 @@ void generate_frame(CPUState* cpu){
     PPU ppu = cpu->ppu;
     for(ppu.v_cntr = 0; ppu.v_cntr < PPU_SCREEN_HEIGHT; ppu.v_cntr++){
         for(ppu.h_cntr = 0; ppu.h_cntr < PPU_SCREEN_WIDTH; ppu.h_cntr++){
+            Bdisp_AllClr_VRAM();
+            PrintXY(1, 1, "  cycle", 0, 0);
+            //GetKey(NULL);
+            if(keydownlast(KEY_PRGM_MENU)) pause_menu_ui();
             PPU_dot(cpu);
             cycle_cpu(cpu);
         }

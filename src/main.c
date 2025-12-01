@@ -20,29 +20,25 @@ int main(void) {
     CPUState cpu;
     Rom rom = main_menu_ui(keybinds);
     init_cpu(&cpu, rom);//rom gets loaded here
-    while (1){
-        /*
-        //menu loop
-        while (1) {
-            keyupdate();
-            if (keydownlast(KEY_CTRL_MENU)) return 1;
-        }
-        */
-        //game loop
-        while (1) {
-            keyupdate();
 
-            PrintXY(1, 2, "  running...", 0, 0);
+    int k;
+    while (1) {
+        keyupdate();
 
-            put_disp();
+        PrintXY(1, 2, "  running...", 0, 0);
 
-            if (keydownlast(KEY_CTRL_MENU)) break;
+        put_disp();
+        if (keydownlast(KEY_CTRL_MENU)) break;
+        //if (keydownlast(KEY_CTRL_MENU)) break;
 
-            update_controller_register(&cpu, keybinds);
+        update_controller_register(&cpu, keybinds);
 
-            generate_frame(&cpu);
-        }
-        pause_menu_ui(&cpu);
+        generate_frame(&cpu);
     }
+    Bdisp_AllClr_VRAM();
+    PrintXY(1, 1, "  Pausing", 0, 0);
+    put_disp();
+    GetKey(&k);
+    pause_menu_ui(&cpu);
     return 0;
 }

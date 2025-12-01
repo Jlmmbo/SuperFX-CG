@@ -73,6 +73,7 @@
 #define STAT78 (cpu->mem[0x00][0x213f])
 
 void put_disp(void);
+void pause_menu_ui();
 
 const unsigned short* keyboard_register = (unsigned short*)0xA44B0000;
 unsigned short lastkey[8];
@@ -84,21 +85,21 @@ void keyupdate(void) {
 }
 
 int keydownlast(int basic_keycode) {
-   int row, col, word, bit; 
-   row = basic_keycode%10; 
-   col = basic_keycode/10-1; 
-   word = row>>1; 
-   bit = col + 8*(row&1); 
-   return (0 != (lastkey[word] & 1<<bit)); 
+   int row, col, word, bit;
+   row = basic_keycode%10;
+   col = basic_keycode/10-1;
+   word = row>>1;
+   bit = col + 8*(row&1);
+   return (0 != (lastkey[word] & 1<<bit));
 }
 
 int keydownhold(int basic_keycode) {
-   int row, col, word, bit; 
-   row = basic_keycode%10; 
-   col = basic_keycode/10-1; 
-   word = row>>1; 
-   bit = col + 8*(row&1); 
-   return (0 != (holdkey[word] & 1<<bit)); 
+   int row, col, word, bit;
+   row = basic_keycode%10;
+   col = basic_keycode/10-1;
+   word = row>>1;
+   bit = col + 8*(row&1);
+   return (0 != (holdkey[word] & 1<<bit));
 }
 
 typedef unsigned char byte;
@@ -155,8 +156,6 @@ typedef struct CPUState{
     byte DBR;//data bank register
     byte PBR;//program bank register
     byte* mem[256];//mem bank pointers
-    unsigned int expected_time;//when the current instruction should finish
-    unsigned int current_time;
     PPU ppu;
     unsigned int rom_mode;
 }CPUState;
