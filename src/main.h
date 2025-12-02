@@ -167,7 +167,6 @@ typedef struct Rom{
 
 typedef struct instr_data{
     address (*addr_func)(CPUState*);//function to calculate effective address
-    byte cycle_count;
     byte read_bytes;//num of bytes read, includes opcode
     void (*instr_func)(CPUState*, address);//function to excecute instruction
 }instr_data;
