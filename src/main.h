@@ -74,6 +74,7 @@
 
 void put_disp(void);
 void pause_menu_ui();
+void error_msg(char*);
 
 const unsigned short* keyboard_register = (unsigned short*)0xA44B0000;
 unsigned short lastkey[8];
@@ -103,6 +104,14 @@ int keydownhold(int basic_keycode) {
 }
 
 typedef unsigned char byte;
+
+typedef struct
+{
+  unsigned short id, type;
+  unsigned long fsize, dsize;
+  unsigned int property;
+  unsigned long address;
+} file_type_t;
 
 typedef struct{
     byte h:8;//high byte

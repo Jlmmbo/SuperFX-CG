@@ -175,9 +175,11 @@ unsigned char list_menu_ui(char* title, char* options[], unsigned char option_co
       PrintXY(1, 1, title, 0, TEXT_COLOR_BLUE);
       for (unsigned char i = 0; i < option_count; i++){
          if (i == list_index){
-            PrintXY(1, 3 + i, options[i], 0, TEXT_COLOR_BLACK);
+            PrintXY(2, 3 + i, options[i], 0, TEXT_COLOR_BLACK);
+            PrintXY(1, 3 + i, "  >", 0, TEXT_COLOR_BLACK);
          } else {
-            PrintXY(1, 3 + i, options[i], 0, TEXT_COLOR_BLUE);
+            PrintXY(2, 3 + i, options[i], 0, TEXT_COLOR_BLUE);
+            PrintXY(1, 3 + i, "   ", 0, TEXT_COLOR_BLUE);
          }
       }
       GetKey(&k);
@@ -196,7 +198,7 @@ unsigned char list_menu_ui(char* title, char* options[], unsigned char option_co
 
 void settings_menu_ui(int keybinds[12]){
    //settings
-   unsigned char option = list_menu_ui("  Settings", (char*[]){"  Keybinds", "  Brightness", "  Frameskip", "  Colour Palette"}, 4);
+   unsigned char option = list_menu_ui("  Settings", (char*[]){"  Keybinds", "  Brightness", "  Frameskip", "  Colour Palette", "  Overclock"}, 4);
    switch(option){
       case 0://keybinds
          keybinds[4] = map_key_ui("  D-UP");
@@ -219,6 +221,8 @@ void settings_menu_ui(int keybinds[12]){
          break;
       case 3://colour palette
          break;
+      case 4://Overclock
+         break;
    }
 }
 
@@ -233,15 +237,14 @@ Rom main_menu_ui(int keybinds[12]){
          }
          case 1:{
             //load ROM
-            char* rom_selection_list[] = {"                ","                ","                ","                "};
+            char* rom_selection_list[] = {sys_malloc(sizeof(char) * 16),sys_malloc(sizeof(char) * 16),sys_malloc(sizeof(char) * 16),sys_malloc(sizeof(char) * 16)};
             byte rom_list_len;
             get_rom_list_fs(rom_selection_list, &rom_list_len);
             if(rom_selection_list == NULL || rom_list_len == 0){
                Bdisp_AllClr_VRAM();
-               PrintXY(1, 1, "  No Roms", 0, 0);
-               GetKey(NULL);
+               error_msg("  No ROMs");
             }
-            Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("  SELECT ROM", rom_selection_list, rom_list_len + 1));
+            Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("  SELECT ROM", rom_selection_list, rom_list_len));
             return selected_rom;
          }
          case 2:{
@@ -263,6 +266,11 @@ void pause_menu_ui(){
    GetKey(&k);
 }
 
+void error_msg(char* msg){
+   Bdisp_AllClr_VRAM();
+   PrintXY(1, 1, msg, 0, 0);
+   GetKey(NULL);
+}
 
 //not done
 

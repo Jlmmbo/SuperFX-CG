@@ -87,9 +87,9 @@ char mem_set(CPUState* cpu, byte value, address addr){
     if(cpu->mem[addr.bank]==NULL){
         cpu->mem[addr.bank] = sys_malloc(65536 * sizeof(byte));
     }
+    //todo: if addr would be rom, do nothing
     cpu->mem[addr.bank][addr.addr] = value;
     //ppu regs at 2100-213f: also set cpu->ppu.-----
-    //no need to allocate certain banks, since they are mirrors, so you can just read/write those
     return 0;
 }
 
@@ -105,6 +105,8 @@ char write_rom(CPUState* cpu, Rom rom){
     else cpu->rom_mode = 0;//LoROM to be safe
     int rom_offset = 0;
 
+    //initialize ram banks
+
     for (int bank = 0x00; bank <= 0x7D; bank++) {
         for (int i = 0x8000; i <= 0xFFFF; i++) {
             if (rom_offset < rom.size) {
@@ -118,7 +120,7 @@ char write_rom(CPUState* cpu, Rom rom){
     return 0;
 }
 
-Rom test_rom = {(byte[4096]){0x00}, 4096};
+const Rom test_rom = {(byte[4096]){0x00}, 4096};
 
 
 /*start up cpu, initialize regs, set load interrupt vector etc.*/

@@ -22,8 +22,7 @@
 - a better way to deal with 8/16 bit values when in native/emulation mode
 - use macros to simplify instruction functions ?????
 - use timers to call ppu_dot and cycle_cpu (make sure to uninstall them before fs stuff and on exit)
-- possible (dangerous): for rom file, use ptr instead of handle to bypass 1mb read_file_os hang
+- possible (dangerous) optimization: for rom file, use ptr instead of handle to bypass 1mb read_file_os hang
 - use arithmetic type for addresses
-- cycle count in instr_data may be useless
-- add optional overclock in settings
-- fetch single pages (not banks) into ram if possible
+- fetch single pages (or last 5 for example) into ram if possible (not banks)
+- fix rom list display

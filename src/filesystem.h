@@ -5,14 +5,14 @@
   unsigned long address;
 }file_type_t;*/
 
-Rom load_rom_fs(char** rom_list, byte rom_index){//bad news: may not even work for files larger that 1mb
+Rom load_rom_fs(char** rom_list, byte rom_index){//may possibly hang for files larger that 1mb
     unsigned short file_name[50];
     Bfile_StrToName_ncpy(file_name, rom_list[rom_index], 49);
     int handle = Bfile_OpenFile_OS(file_name, 0, 0);
     if(handle < 0) return test_rom;
     Rom rom;
     rom.size = Bfile_GetFileSize_OS(handle);
-    rom.raw = NULL;//just to get the compiler to shut up about using rom.raw uninitialized
+    rom.raw = sys_malloc(sizeof(byte) * rom.size);
     Bfile_ReadFile_OS(handle, rom.raw, rom.size, 0);
     Bfile_CloseFile_OS(handle);
     return rom;
@@ -22,47 +22,22 @@ void get_rom_list_fs(char** rom_list, byte* len){
     *len = 0;
     
     int FindHandle;
-    char* FoundFile = NULL;
-    file_type_t* fileinfo = NULL;
+    unsigned short* FoundFile = sys_malloc(sizeof(unsigned short) * 32);
+    file_type_t fileinfo = {0, 0, 0, 0, 0, 0};
 
     unsigned short pathname[0x100];
     Bfile_StrToName_ncpy(pathname, "\\\\fls0\\*.sfc", 0x50);
     
-    int err = Bfile_FindFirst(pathname, &FindHandle, FoundFile, fileinfo);//if the file is larger that 2mb, too bad... :(
-    Bdisp_AllClr_VRAM();
-    PrintXY(1, 1, "  hi", 0, TEXT_COLOR_BLACK);
-    GetKey(NULL);
-    if (err == -5){
-        Bdisp_AllClr_VRAM();
-        PrintXY(1, 1, "  bad pref", 0, TEXT_COLOR_BLACK);
-        GetKey(NULL);
-        rom_list = NULL;
-        Bfile_FindClose(FindHandle);
-        return;
-    }
-
-    if (err == -1){
-        Bdisp_AllClr_VRAM();
-        PrintXY(1, 1, "  bad name", 0, TEXT_COLOR_BLACK);
-        GetKey(NULL);
-        rom_list = NULL;
-        Bfile_FindClose(FindHandle);
-        return;
-    }
+    int err = Bfile_FindFirst(pathname, &FindHandle, FoundFile, &fileinfo);//if the file is larger that 2mb, too bad... :(
 
     if (err == -16){
-        Bdisp_AllClr_VRAM();
-        PrintXY(1, 1, "  No Roms", 0, TEXT_COLOR_BLACK);
-        GetKey(NULL);
+        error_msg("  No ROMs");
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
         return;
-    }
-
-    if (err == 0){
-        Bdisp_AllClr_VRAM();
-        PrintXY(1, 1, "  found", 0, TEXT_COLOR_BLACK);
-        GetKey(NULL);
+    } else if (err < 16)
+    {
+        error_msg("  Path Error");
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
         return;
@@ -70,15 +45,19 @@ void get_rom_list_fs(char** rom_list, byte* len){
 
     int i = 0;
     while (1){
-        int err = Bfile_FindNext(FindHandle, FoundFile, fileinfo);
-        if (err < 0){// no more files
-            break;
+        int err = Bfile_FindNext(FindHandle, FoundFile, &fileinfo);
+        if (err == -16){// no more files
+            Bfile_FindClose(FindHandle);
+            return;
+        } else if (err < 0){
+            error_msg("  path ERROR");
+            return;
         }
-        rom_list[i] = FoundFile;
-        i++;
-        (*len)++;
+        if (err == 0){
+            Bfile_NameToStr_ncpy(rom_list[i], FoundFile, 0x10);
+            i++;
+            (*len)++;
+        }
     }
-
     Bfile_FindClose(FindHandle);
-
 }

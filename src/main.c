@@ -29,8 +29,7 @@ int main(void) {
 
         put_disp();
         if (keydownlast(KEY_CTRL_MENU)) break;
-        //if (keydownlast(KEY_CTRL_MENU)) break;
-
+        
         update_controller_register(&cpu, keybinds);
 
         generate_frame(&cpu);
