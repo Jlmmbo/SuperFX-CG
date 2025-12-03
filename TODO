@@ -2,8 +2,6 @@
 - peripherals:
     - ppu:
         - add a buffer that will contain last scanlines' tile indexes to check first. remove the ones that are no longer on the scanline
-    - screen
-    - audio ??
     - other memory mapped peripherals
     - cartrige hardware:
         - coprocessors

@@ -118,10 +118,11 @@ typedef struct{
     byte l:8;//low byte
 }two_bytes;
 
-typedef struct address{
+/*typedef struct address{
     byte bank;
     uint16_t addr;
-}address;
+}address;*/
+typedef uint32_t address;
 
 typedef struct StatusReg{
     char N:1;//bit 7: Negative

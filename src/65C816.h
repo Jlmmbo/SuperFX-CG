@@ -35,37 +35,33 @@ void status_apply_mask(StatusReg* P, byte set_bits, byte clear_bits){
 
 
 void push(CPUState* cpu, byte val){
-    if (cpu->P.M == 0) cpu->mem[0][cpu->S.h * 256 + cpu->S.l] = val;
+    if (cpu->P.M == 0) cpu->mem[0][(cpu->S.h << 8) + cpu->S.l] = val;
     else cpu->mem[0][cpu->S.l] = val;
     cpu->S = sub_2_1(cpu->S, 0x01);//descending stack
 }
 
 byte pull(CPUState* cpu){
     cpu->S = add_2_1(cpu->S, 0x01);//??????????? if in emulation mode, does S.h decrement on page wrap?
-    if (cpu->P.M == 0) return cpu->mem[0][cpu->S.h * 256 + cpu->S.l];
+    if (cpu->P.M == 0) return cpu->mem[0][(cpu->S.h << 8) + cpu->S.l];
     return cpu->mem[0][cpu->S.l];
 }
 
 address inc_addr(address addr){
-    uint32_t final_addr = addr.bank * 65536 + addr.addr + 1;
-    return (address){final_addr % 65536, final_addr / 65536};
+    return (addr + 1) & 0xFFFFFF;
 }
 
-address add_addr(address addr, uint16_t amt){
-    uint32_t final_addr = addr.bank * 65536 + addr.addr + amt;
-    return (address){final_addr % 65536, final_addr / 65536};
+address add_addr(address addr, address amt){
+    return (addr + amt) & 0xFFFFFF;
 }
 
 
 address mem_get_addr(address addr, byte rom_mode){
     if(rom_mode == 0){//LoROM
-        addr.addr %= 32768;//ignore high bit of addr
-        addr.bank %= 128;//ignore high bit of bank
-        return addr;
+        addr &= 0x7F7FFF;//ignore bank high bit and page high bit
     } else if(rom_mode == 1){//HiROM
-        addr.bank %= 64;//ignore highest 2 bits of bank
-    } else if(rom_mode == 5){
-        addr.bank = (addr.bank % 64) + (addr.bank >> 7) * 128;
+        addr &= 0x3FFFFF;//ignore highest 2 bits of bank
+    } else if(rom_mode == 5){//ExHiROM
+        addr &= 0xBFFFF;//ignore 2nd highest bit, highest is supposed to be inverted, but who cares?
     }
     return addr;
 }
@@ -74,21 +70,21 @@ address mem_get_addr(address addr, byte rom_mode){
  If bank has not already been allocated, calls sys_malloc()*/
 byte mem_fetch(CPUState* cpu, address addr){
     addr = mem_get_addr(addr, cpu->rom_mode);
-    if(cpu->mem[addr.bank]==NULL){
-        cpu->mem[addr.bank] = sys_malloc(65536 * sizeof(byte));
+    if(cpu->mem[addr >> 16]==NULL){
+        cpu->mem[addr >> 16] = sys_malloc(65536 * sizeof(byte));
     }
-    return cpu->mem[addr.bank][addr.addr];
+    return cpu->mem[addr >> 16][addr & 0xFFFF];
 }
 
 /*set memory at address in bank.
  If bank has not already been allocated, will call sys_malloc()*/
 char mem_set(CPUState* cpu, byte value, address addr){
     addr = mem_get_addr(addr, cpu->rom_mode);
-    if(cpu->mem[addr.bank]==NULL){
-        cpu->mem[addr.bank] = sys_malloc(65536 * sizeof(byte));
+    if(cpu->mem[addr >> 16]==NULL){
+        cpu->mem[addr >> 16] = sys_malloc(65536 * sizeof(byte));
     }
     //todo: if addr would be rom, do nothing
-    cpu->mem[addr.bank][addr.addr] = value;
+    cpu->mem[addr >> 16][addr & 0xFFFF] = value;
     //ppu regs at 2100-213f: also set cpu->ppu.-----
     return 0;
 }
@@ -111,7 +107,7 @@ char write_rom(CPUState* cpu, Rom rom){
         for (int i = 0x8000; i <= 0xFFFF; i++) {
             if (rom_offset < rom.size) {
                 //cpu->mem[bank][i] = rom.raw[rom_offset++];
-                mem_set(cpu, rom.raw[rom_offset++], (address){bank, i});
+                mem_set(cpu, rom.raw[rom_offset++], (address){bank * 65536 + i});
             //} else {
                 //cpu->mem[bank][i] = 0xFF;  // open bus
             }
@@ -153,154 +149,150 @@ void init_cpu(CPUState* cpu, Rom rom){
         PrintXY(1, 1, "  GET MORE SPACE!!", 0, 0);
     }
 
-    //cpu->PC = cpu->mem[0][0xFFFD] * 256 + cpu->mem[0][0xFFFC];
-    cpu->PC = mem_fetch(cpu, (address){0, 0xfffd}) * 256 + mem_fetch(cpu, (address){0, 0xfffc});
+    //cpu->PC = cpu->mem[0][0xFFFD] << 8) + cpu->mem[0][0xFFFC];
+    cpu->PC = (mem_fetch(cpu, 0x00fffd) << 8) + mem_fetch(cpu, 0x00fffc);
 
     cpu->ppu.h_cntr = 0;
     cpu->ppu.v_cntr = 0;
-    cpu->ppu.VRAM = (uint16_t*)&(cpu->mem[0x00][VMADDH * 256 + VMADDL]);
+    cpu->ppu.VRAM = (uint16_t*)&(cpu->mem[0x00][(VMADDH << 8) + VMADDL]);
 }
 
 //absolute
 address a(CPUState* cpu){
-    address addr = (address){cpu->PBR, cpu->PC};
-    return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256};
+    address addr = (cpu->PBR << 16) + cpu->PC;
+    return (cpu->DBR << 16) + mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
 }
 
 //absolute indexed indirect
 address axi(CPUState* cpu){
-    address addr = (address){cpu->PBR, cpu->PC};
-    return (address){0x00, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256 + cpu->X};
+    address addr = (cpu->PBR << 16) + cpu->PC;
+    return mem_fetch(cpu, addr) + mem_fetch(cpu, (inc_addr(addr)) << 8) + cpu->X;
 }
 
 //absolute indexed X
 address ax(CPUState* cpu){
-    address addr = (address){cpu->PBR, cpu->PC};
-    return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256 + cpu->X};
+    address addr = (cpu->PBR << 16) + cpu->PC;
+    return (cpu->DBR << 16) + mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8) + cpu->X;
 }
 
 //absolute indexed Y
 address ay(CPUState* cpu){
-    address addr = (address){cpu->PBR, cpu->PC};
-    return (address){cpu->DBR, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256 + cpu->Y};
+    address addr = (cpu->PBR << 16) + cpu->PC;
+    return (cpu->DBR << 16) + mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8) + cpu->Y;
 }
 
 //absolute indirect
 address ai(CPUState* cpu){
-    address addr = (address){cpu->PBR, cpu->PC};
-    return (address){0x00, mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256};
+    address addr = (cpu->PBR << 16) + cpu->PC;
+    return mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
 }
 
 //absolute long indexed
 address alx(CPUState* cpu){
-    address addr = (address){cpu->PBR, cpu->PC};
-    return (address){mem_fetch(cpu, inc_addr(inc_addr(addr))), mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256 + cpu->X};
+    address addr = (cpu->PBR << 16) + cpu->PC;
+    return mem_fetch(cpu, (inc_addr(inc_addr(addr))) << 16) + mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8) + cpu->X;
 }
 
 //absolute long
 address al(CPUState* cpu){
-    address addr = (address){cpu->PBR, cpu->PC};
-    return (address){mem_fetch(cpu, inc_addr(inc_addr(addr))), mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256};
+    address addr = (cpu->PBR << 16) + cpu->PC;
+    return mem_fetch(cpu, (inc_addr(inc_addr(addr))) << 16) + mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
 }
-
-/*address A(CPUState* cpu){
-    return (address){cpu->PBR, cpu->PC};
-}*/
 
 //block move
 address xyc(CPUState* cpu){
-    return (address){cpu->DBR, mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
+    return (cpu->DBR << 16) + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC);
 }
 
 //direct indexed indirect
 address dxi(CPUState* cpu){
-    return (address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->X};
+    return (cpu->DBR << 16) + cpu->D + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC) + cpu->X;
 }
 
 //direct indexed X
 address dx(CPUState* cpu){
-    return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->X};
+    return cpu->D + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC) + cpu->X;
 }
 
 //direct indexed Y
 address dy(CPUState* cpu){
-    return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->Y};
+    return cpu->D + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC) + cpu->Y;
 }
 
 //direct indirect indexed
 address diy(CPUState* cpu){
-    return add_addr((address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
+    return add_addr((cpu->DBR << 16) + cpu->D + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC), cpu->Y);
 }
 
 //direct long indirecte indexed
 address dliy(CPUState* cpu){
-    return add_addr((address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
+    return add_addr(cpu->D + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC), cpu->Y);
 }
 
 //direct long indirect
 address dli(CPUState* cpu){
-    return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
+    return cpu->D + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC);
 }
 
 //direct indirect
 address di(CPUState* cpu){
-    return (address){cpu->DBR, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
+    return (cpu->DBR << 16) + cpu->D + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC);
 }
 
 //direct
 address d(CPUState* cpu){
-    return (address){0x00, cpu->D + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})};
+    return cpu->D + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC);
 }
 
 // immediate
 address imm(CPUState* cpu){
-    return (address){cpu->PBR, cpu->PC};
+    return (cpu->PBR << 16) + cpu->PC;
 }
 
 //no address
 address nil(CPUState* cpu){
-    return (address){0, 0};
+    return 0;
 }
 
 //relative long
 address rl(CPUState* cpu){
-    return (address){cpu->PBR, cpu->PC};//////////////////////////////////////////////////////////////////////////////
+    return (cpu->PBR << 16) + cpu->PC;//////////////////////////////////////////////////////////////////////////////
 }
 
 //relative
 address r(CPUState* cpu){
-    return (address){cpu->PBR, cpu->PC};//////////////////////////////////////////////////////////////////////////////
+    return (cpu->PBR << 16) + cpu->PC;//////////////////////////////////////////////////////////////////////////////
 }
 
 //stack
 address s(CPUState* cpu){
-    return (address){0x00, cpu->S.h * 256 + cpu->S.l};
+    return (cpu->S.h << 8) + cpu->S.l;
 }
 
 //direct stack
 address ds(CPUState* cpu){
-    return add_addr((address){0x00, cpu->S.h * 256 + cpu->S.l}, mem_fetch(cpu, (address){cpu->PBR, cpu->PC}));
+    return add_addr((cpu->S.h << 8) + cpu->S.l, mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC));
 }
 
 //direct stack indirect indexed
 address dsiy(CPUState* cpu){
-    return add_addr((address){cpu->DBR, cpu->S.h * 256 + cpu->S.l + mem_fetch(cpu, (address){cpu->PBR, cpu->PC})}, cpu->Y);
+    return add_addr((cpu->DBR << 16) + (cpu->S.h << 8) + cpu->S.l + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC), cpu->Y);
 }
 
 //BReaK
 void BRK(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
         push(cpu, cpu->PBR);
-        push(cpu, cpu->PC / 256);
-        push(cpu, cpu->PC % 256 + 2);
+        push(cpu, cpu->PC >> 8);
+        push(cpu, (cpu->PC & 0xFF) + 2);
         push(cpu, status_to_byte(cpu->P));
-        cpu->PC = mem_fetch(cpu, (address){00, 0xffe6}) + mem_fetch(cpu, (address){00, 0xffe7}) * 256;
+        cpu->PC = mem_fetch(cpu, 0x00ffe6) + (mem_fetch(cpu, 0x00ffe7) << 8);
         cpu->P.I = 1;
     } else {
-        push(cpu, cpu->PC / 256);
-        push(cpu, cpu->PC % 256 + 2);
+        push(cpu, cpu->PC >> 8);
+        push(cpu, (cpu->PC & 0xFF) + 2);
         push(cpu, status_to_byte(cpu->P));
-        cpu->PC = mem_fetch(cpu, (address){00, 0xfffe}) + mem_fetch(cpu, (address){00, 0xffff}) * 256;
+        cpu->PC = mem_fetch(cpu, 0x00fffe) + (mem_fetch(cpu, 0x00ffff) << 8);
         cpu->P.I = 1;
         cpu->P.X = 1;
     }
@@ -310,7 +302,7 @@ void BRK(CPUState* cpu, address addr){
 //OR with Accumulator
 void ORA(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
-        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        uint16_t v = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
         cpu->C = separate_bytes(v | bytes_to_int(cpu->C.h, cpu->C.l));
         cpu->P.N = cpu->C.h >> 7;
         cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
@@ -327,15 +319,15 @@ void COP(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
         push(cpu, cpu->PBR);
         cpu->PBR = 0;
-        push(cpu, cpu->PC / 256);
-        push(cpu, cpu->PC % 256 + 2);
+        push(cpu, cpu->PC >> 8);
+        push(cpu, (cpu->PC & 0xFF) + 2);
         push(cpu, status_to_byte(cpu->P));
         cpu->P.I = 1;
         cpu->P.D = 0;
         return;
     }
-    push(cpu, cpu->PC / 256);
-    push(cpu, cpu->PC % 256);
+    push(cpu, cpu->PC >> 8);
+    push(cpu, cpu->PC & 0xFF);
     push(cpu, status_to_byte(cpu->P));
     cpu->P.I = 1;
     cpu->P.D = 0;
@@ -396,11 +388,11 @@ void ASLA(CPUState* cpu, address addr){
 //PusH D
 void PHD(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
-        push(cpu, cpu->D / 256);
-        push(cpu, cpu->D % 256);
+        push(cpu, cpu->D >> 8);
+        push(cpu, cpu->D & 0xFF);
         return;
     }
-    push(cpu, cpu->D % 256);
+    push(cpu, cpu->D & 0xFF);
 }
 
 //Branch if PLus
@@ -450,15 +442,15 @@ void TCS(CPUState* cpu, address addr){
 
 //Jump to SubRoutine
 void JSR(CPUState* cpu, address addr){
-    push(cpu, cpu->PC / 256);
-    push(cpu, cpu->PC % 256);
+    push(cpu, cpu->PC >> 8);
+    push(cpu, cpu->PC & 0xFF);
     cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr));
 }
 
 //AND with Accumulator
 void AND(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
-        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        uint16_t v = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
         cpu->C = separate_bytes(v & bytes_to_int(cpu->C.h, cpu->C.l));
         cpu->P.N = cpu->C.h >> 7;
         cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
@@ -473,8 +465,8 @@ void AND(CPUState* cpu, address addr){
 //Jump to Subroutine Long
 void JSL(CPUState* cpu, address addr){
     push(cpu, cpu->PBR);
-    push(cpu, cpu->PC / 256);
-    push(cpu, cpu->PC % 256 + 3);
+    push(cpu, cpu->PC >> 8);
+    push(cpu, (cpu->PC & 0xFF) + 3);
     cpu->PBR = mem_fetch(cpu, inc_addr(inc_addr(addr)));
     cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr));
 }
@@ -482,7 +474,7 @@ void JSL(CPUState* cpu, address addr){
 //test BITs
 void BIT(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
-        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        uint16_t v = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
         two_bytes ans = (two_bytes){cpu->C.h & (v >> 8), cpu->C.l & (v & 0x00FF)}; 
         cpu->P.N = ans.h >> 7;
         cpu->P.V = (ans.h >> 6) & 0b01;//P.V = bit 14
@@ -549,7 +541,7 @@ void ROLA(CPUState* cpu, address addr){
 
 //PuLl D
 void PLD(CPUState* cpu, address addr){
-    cpu->D = pull(cpu) + pull(cpu) * 256;
+    cpu->D = pull(cpu) + (pull(cpu) << 8);
 }
 
 //Branch if MInus
@@ -589,7 +581,7 @@ void TSC(CPUState* cpu, address addr){
 void RTI(CPUState* cpu, address addr){
     byte P = pull(cpu);
     cpu->P = byte_to_status(P);
-    cpu->PC = pull(cpu) + pull(cpu) * 256;
+    cpu->PC = pull(cpu) + (pull(cpu) << 8);
     if (cpu->P.M == 0){//16-bit
         cpu->PBR = pull(cpu);
     }
@@ -598,7 +590,7 @@ void RTI(CPUState* cpu, address addr){
 //Exclusive OR with accumulator
 void EOR(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
-        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        uint16_t v = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
         cpu->C = separate_bytes(v ^ bytes_to_int(cpu->C.h, cpu->C.l));
         cpu->P.N = cpu->C.h >> 7;
         cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
@@ -620,7 +612,7 @@ void MVP(CPUState* cpu, address addr){
     byte dest_bank = mem_fetch(cpu, addr);
     byte src_bank = mem_fetch(cpu, inc_addr(addr));
     while (!((cpu->C.h == 0xff) && (cpu->C.l == 0xff))){
-        mem_set(cpu, mem_fetch(cpu, (address){src_bank, cpu->X}), (address){dest_bank, cpu->Y});
+        mem_set(cpu, mem_fetch(cpu, (src_bank << 16) + cpu->X), (dest_bank << 16) + cpu->Y);
         cpu->X--;
         cpu->Y--;
         cpu->C = sub_2_1(cpu->C, 0x01);
@@ -675,12 +667,12 @@ void PHK(CPUState* cpu, address addr){
 
 //JuMP
 void JMP(CPUState* cpu, address addr){
-    cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+    cpu->PC = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
 }
 
 //JMP Long addr
 void JMPL(CPUState* cpu, address addr){
-    cpu->PC = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+    cpu->PC = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
     cpu->PBR = mem_fetch(cpu, inc_addr(inc_addr(addr)));
 }
 
@@ -699,7 +691,7 @@ void MVN(CPUState* cpu, address addr){
     byte dest_bank = mem_fetch(cpu, addr);
     byte src_bank = mem_fetch(cpu, inc_addr(addr));
     while (!((cpu->C.h == 0xff) && (cpu->C.l == 0xff))){
-        mem_set(cpu, mem_fetch(cpu, (address){src_bank, cpu->X}), (address){dest_bank, cpu->Y});
+        mem_set(cpu, mem_fetch(cpu, (src_bank << 16) + cpu->X), (dest_bank << 16) + cpu->Y);
         cpu->X++;
         cpu->Y++;
         cpu->C = sub_2_1(cpu->C, 0x01);
@@ -713,24 +705,24 @@ void CLI(CPUState* cpu, address addr){
 
 //PusH Y
 void PHY(CPUState* cpu, address addr){
-    if (cpu->P.X == 0) push(cpu, cpu->Y / 256);
-    push(cpu, cpu->Y % 256);
+    if (cpu->P.X == 0) push(cpu, cpu->Y >> 8);
+    push(cpu, cpu->Y & 0xFF);
 }
 
 //Transdfer aCcumulator to D
 void TCD(CPUState* cpu, address addr){
-    cpu->D = cpu->C.h * 256 + cpu->C.l;
+    cpu->D = (cpu->C.h << 8) + cpu->C.l;
 }
 
 //ReTurn from Subroutine
 void RTS(CPUState* cpu, address addr){
-    cpu->PC = pull(cpu) + pull(cpu) * 256;
+    cpu->PC = pull(cpu) + (pull(cpu) << 8);
 }
 
 //ADd with Carry
 void ADC(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
-        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        uint16_t v = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
         cpu->C = separate_bytes(v + bytes_to_int(cpu->C.h, cpu->C.l));
         cpu->P.N = cpu->C.h >> 7;
         cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
@@ -744,9 +736,9 @@ void ADC(CPUState* cpu, address addr){
 
 //Push Effective pc Relative
 void PER(CPUState* cpu, address addr){
-    uint16_t sum = cpu->PC + mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
-    push(cpu, sum / 256);
-    push(cpu, sum % 256);
+    uint16_t sum = cpu->PC + mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
+    push(cpu, sum >> 8);
+    push(cpu, sum & 0xFF);
 }
 
 //STore Zero
@@ -801,7 +793,7 @@ void RORA(CPUState* cpu, address addr){
 
 //ReTurn from subroutine Long
 void RTL(CPUState* cpu, address addr){
-    cpu->PC = pull(cpu) + pull(cpu) * 256 + 1;
+    cpu->PC = pull(cpu) + (pull(cpu) << 8) + 1;
     cpu->PBR = pull(cpu);
 }
 
@@ -822,12 +814,12 @@ void SEI(CPUState* cpu, address addr){
 
 //PuLl Y
 void PLY(CPUState* cpu, address addr){
-    cpu->Y = pull(cpu) + (cpu->P.X ? 0 : pull(cpu) * 256);
+    cpu->Y = pull(cpu) + (cpu->P.X ? 0 : (pull(cpu) << 8));
 }
 
 //Transfer D to aCcumulator
 void TDC(CPUState* cpu, address addr){
-    cpu->C = (two_bytes){cpu->D / 256, cpu->D %  256};
+    cpu->C = (two_bytes){cpu->D >> 8, cpu->D %  256};
 }
 
 //BRanch Always
@@ -848,28 +840,28 @@ void STA(CPUState* cpu, address addr){
 
 //BRanch Long
 void BRL(CPUState* cpu, address addr){
-    uint16_t offset = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+    uint16_t offset = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
     cpu->PC = cpu->PC + (offset - 32768);
 }
 
 //STore Y
 void STY(CPUState* cpu, address addr){
     if (cpu->P.X == 0){//16-bit
-        mem_set(cpu, cpu->Y / 256, addr);
-        mem_set(cpu, cpu->Y % 256, inc_addr(addr));
+        mem_set(cpu, cpu->Y >> 8, addr);
+        mem_set(cpu, cpu->Y & 0xFF, inc_addr(addr));
         return;
     }
-    mem_set(cpu, cpu->Y / 256, addr);
+    mem_set(cpu, cpu->Y >> 8, addr);
 }
 
 //STore X
 void STX(CPUState* cpu, address addr){
     if (cpu->P.X == 0){//16-bit
-        mem_set(cpu, cpu->X / 256, addr);
-        mem_set(cpu, cpu->X % 256, inc_addr(addr));
+        mem_set(cpu, cpu->X >> 8, addr);
+        mem_set(cpu, cpu->X & 0xFF, inc_addr(addr));
         return;
     }
-    mem_set(cpu, cpu->X / 256, addr);
+    mem_set(cpu, cpu->X >> 8, addr);
 }
 
 //DECrement Y
@@ -878,7 +870,7 @@ void DEY(CPUState* cpu, address addr){
         cpu->Y--;
         cpu->P.N = cpu->Y >> 15;
     } else {
-        cpu->Y = (cpu->Y / 256) + ((cpu->Y % 256) - 1);
+        cpu->Y = (cpu->Y >> 8) + ((cpu->Y & 0xFF) - 1);
         cpu->P.N = cpu->Y >> 7;
     }
     cpu->P.Z = cpu->Y == 0;
@@ -887,12 +879,12 @@ void DEY(CPUState* cpu, address addr){
 //Transfer X to Accumulator
 void TXA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
-        cpu->C = (two_bytes){cpu->X / 256, cpu->X % 256};
+        cpu->C = (two_bytes){cpu->X >> 8, cpu->X & 0xFF};
         cpu->P.N = cpu->C.h >> 7;
         cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
         return;
     }
-    cpu->C.l = cpu->X % 256;
+    cpu->C.l = cpu->X & 0xFF;
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
@@ -915,12 +907,12 @@ void BCC(CPUState* cpu, address addr){
 //Transfer Y to Accumulator
 void TYA(CPUState* cpu, address addr){
     if (cpu->P.M == 0){//16-bit
-        cpu->C = (two_bytes){cpu->Y / 256, cpu->Y % 256};
+        cpu->C = (two_bytes){cpu->Y >> 8, cpu->Y & 0xFF};
         cpu->P.N = cpu->C.h >> 7;
         cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
         return;
     }
-    cpu->C.l = cpu->Y % 256;
+    cpu->C.l = cpu->Y & 0xFF;
     cpu->P.N = cpu->C.l >> 7;
     cpu->P.Z = cpu->C.l == 0;
 }
@@ -928,11 +920,11 @@ void TYA(CPUState* cpu, address addr){
 //Transfer X to Stack
 void TXS(CPUState* cpu, address addr){
     if ((cpu->P.M == 0) && (cpu->P.X == 0)){//does M define the size of S??
-        cpu->S = (two_bytes){cpu->X / 256, cpu->X % 256};
+        cpu->S = (two_bytes){cpu->X >> 8, cpu->X & 0xFF};
     } else if (cpu->P.M == 0){
-        cpu->S = (two_bytes){0, cpu->X % 256};
+        cpu->S = (two_bytes){0, cpu->X & 0xFF};
     } else {
-        cpu->S.l = cpu->X % 256;
+        cpu->S.l = cpu->X & 0xFF;
     }
 }
 
@@ -983,7 +975,7 @@ void LDX(CPUState* cpu, address addr){
 //Transfer Accumulator to Y
 void TAY(CPUState* cpu, address addr){
     if(cpu->P.X == 0){//16-bit
-        cpu->Y = cpu->C.h * 256 + cpu->C.l;
+        cpu->Y = (cpu->C.h << 8) + cpu->C.l;
         cpu->P.N = cpu->Y >> 15;
     } else {
         cpu->Y = cpu->C.l;
@@ -995,7 +987,7 @@ void TAY(CPUState* cpu, address addr){
 //Transfer Accumulator to X
 void TAX(CPUState* cpu, address addr){
     if(cpu->P.X == 0){//16-bit
-        cpu->X = cpu->C.h * 256 + cpu->C.l;
+        cpu->X = (cpu->C.h << 8) + cpu->C.l;
         cpu->P.N = cpu->X >> 15;
     } else {
         cpu->X = cpu->C.l;
@@ -1027,7 +1019,7 @@ void CLV(CPUState* cpu, address addr){
 //Transfer Stack to X
 void TSX(CPUState* cpu, address addr){
     if(cpu->P.X == 0){//16-bit
-        cpu->X = cpu->S.h * 256 + cpu->S.l;
+        cpu->X = (cpu->S.h << 8) + cpu->S.l;
         cpu->P.N = cpu->X >> 15;
     } else {
         cpu->X = cpu->S.l;
@@ -1061,7 +1053,7 @@ void CPY(CPUState* cpu, address addr){
 //CoMPare memory with Accumulator
 void CMP(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
-        uint16_t C = cpu->C.h * 256 + cpu->C.l;
+        uint16_t C = (cpu->C.h << 8) + cpu->C.l;
         uint16_t val = C - mem_fetch(cpu, addr);
         cpu->P.Z = val == 0;
         cpu->P.N = val >> 15;
@@ -1091,8 +1083,8 @@ void DEC(CPUState* cpu, address addr){
     if (cpu->P.X == 0){//16-bit
         val = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) - 1;
         cpu->P.N = cpu->Y >> 15;
-        mem_set(cpu, val % 65536, addr);
-        mem_set(cpu, val / 65536, inc_addr(addr));
+        mem_set(cpu, val & 0xFFFF, addr);
+        mem_set(cpu, (val >> 16), inc_addr(addr));
     } else {
         val = mem_fetch(cpu, addr) - 1;
         cpu->P.N = cpu->Y >> 7;
@@ -1106,7 +1098,7 @@ void INY(CPUState* cpu, address addr){
         cpu->Y++;
         cpu->P.N = cpu->Y >> 15;
     } else {
-        cpu->Y = (cpu->Y / 256) + ((cpu->Y % 256) + 1);
+        cpu->Y = (cpu->Y >> 8) + ((cpu->Y & 0xFF) + 1);
         cpu->P.N = cpu->Y >> 7;
     }
     cpu->P.Z = cpu->Y == 0;
@@ -1118,7 +1110,7 @@ void DEX(CPUState* cpu, address addr){
         cpu->X--;
         cpu->P.N = cpu->X >> 15;
     } else {
-        cpu->X = (cpu->X / 256) + ((cpu->X % 256) - 1);
+        cpu->X = (cpu->X >> 8) + ((cpu->X & 0xFF) - 1);
         cpu->P.N = cpu->X >> 7;
     }
     cpu->P.Z = cpu->X == 0;
@@ -1141,7 +1133,7 @@ void BNE(CPUState* cpu, address addr){
 
 //Push Effective Indirect address
 void PEI(CPUState* cpu, address addr){
-   push(cpu, mem_fetch(cpu, (address){cpu->PBR, mem_fetch(cpu, (address){cpu->PBR, cpu->PC}) + cpu->D}));
+   push(cpu, mem_fetch(cpu, (cpu->PBR << 16) + mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC) + cpu->D));
 }
 
 //CLear Decimal flag
@@ -1151,8 +1143,8 @@ void CLD(CPUState* cpu, address addr){
 
 //PusH X
 void PHX(CPUState* cpu, address addr){
-    if(cpu->P.X == 0) push(cpu, cpu->X / 256);
-    push(cpu, cpu->X % 256);
+    if(cpu->P.X == 0) push(cpu, cpu->X >> 8);
+    push(cpu, cpu->X & 0xFF);
 }
 
 //SToP the clock
@@ -1178,7 +1170,7 @@ void CPX(CPUState* cpu, address addr){
 //
 void SBC(CPUState* cpu, address addr){
     if(cpu->P.M == 0){//16-bit
-        uint16_t v = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) * 256;
+        uint16_t v = mem_fetch(cpu, addr) + (mem_fetch(cpu, inc_addr(addr)) << 8);
         cpu->C = separate_bytes(v - bytes_to_int(cpu->C.h, cpu->C.l));
         cpu->P.N = cpu->C.h >> 7;
         cpu->P.Z = (cpu->C.h == 0) && (cpu->C.l == 0);
@@ -1207,8 +1199,8 @@ void INC(CPUState* cpu, address addr){
     if (cpu->P.X == 0){//16-bit
         val = mem_fetch(cpu, addr) + mem_fetch(cpu, inc_addr(addr)) + 1;
         cpu->P.N = cpu->Y >> 15;
-        mem_set(cpu, val % 65536, addr);
-        mem_set(cpu, val / 65536, inc_addr(addr));
+        mem_set(cpu, val & 0xFFFF, addr);
+        mem_set(cpu, (val >> 16), inc_addr(addr));
     } else {
         val = mem_fetch(cpu, addr) + 1;
         cpu->P.N = cpu->Y >> 7;
@@ -1222,7 +1214,7 @@ void INX(CPUState* cpu, address addr){
         cpu->X++;
         cpu->P.N = cpu->X >> 15;
     } else {
-        cpu->X = (cpu->X / 256) + ((cpu->X % 256) + 1);
+        cpu->X = (cpu->X >> 8) + ((cpu->X & 0xFF) + 1);
         cpu->P.N = cpu->X >> 7;
     }
     cpu->P.Z = cpu->X == 0;
@@ -1263,7 +1255,7 @@ void SED(CPUState* cpu, address addr){
 
 //Pull X
 void PLX(CPUState* cpu, address addr){
-    cpu->X = pull(cpu) + (cpu->P.X ? 0 : pull(cpu) * 256);
+    cpu->X = pull(cpu) + (cpu->P.X ? 0 : (pull(cpu) << 8));
 }
 
 //Transfer C to E
@@ -1550,7 +1542,7 @@ const instr_data instructions[] = {
 /*run instruction
 returns 0 for success; 1: somehow illegal opcode; 2:...*/
 char run_instr_cpu(CPUState* cpu){
-    byte instr = mem_fetch(cpu, (address){cpu->PBR, cpu->PC});
+    byte instr = mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC);
     char buf[5];
     byte_to_str(instr, buf);
     PrintXY(1, 1, buf, 0, 0);
