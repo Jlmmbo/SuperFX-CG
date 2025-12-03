@@ -26,24 +26,26 @@ void get_rom_list_fs(char** rom_list, byte* len){
     file_type_t fileinfo = {0, 0, 0, 0, 0, 0};
 
     unsigned short pathname[0x100];
-    Bfile_StrToName_ncpy(pathname, "\\\\fls0\\*.sfc", 0x50);
+    Bfile_StrToName_ncpy(pathname, "\\\\fls0\\*.sfc", 0x100);
     
     int err = Bfile_FindFirst(pathname, &FindHandle, FoundFile, &fileinfo);//if the file is larger that 2mb, too bad... :(
-
+    int i = 0;
     if (err == -16){
         error_msg("  No ROMs");
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
         return;
-    } else if (err < 16)
-    {
+    } else if (err < 0) {
         error_msg("  Path Error");
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
         return;
+    } else {
+        Bfile_NameToStr_ncpy(rom_list[i], FoundFile, 0x10);
+        i++;
+        (*len)++;
     }
 
-    int i = 0;
     while (1){
         int err = Bfile_FindNext(FindHandle, FoundFile, &fileinfo);
         if (err == -16){// no more files

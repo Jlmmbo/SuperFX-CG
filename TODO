@@ -20,4 +20,3 @@
 - possible (dangerous) optimization: for rom file, use ptr instead of handle to bypass 1mb read_file_os hang
 - use arithmetic type for addresses
 - fetch single pages (or last 5 for example) into ram if possible (not banks)
-- fix rom list display

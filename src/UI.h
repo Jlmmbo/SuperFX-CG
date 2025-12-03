@@ -172,14 +172,14 @@ unsigned char list_menu_ui(char* title, char* options[], unsigned char option_co
    int k;
    Bdisp_AllClr_VRAM();
    while (1){
-      PrintXY(1, 1, title, 0, TEXT_COLOR_BLUE);
+      PrintCXY(1, 1, title, 0, -1, COLOR_BLUE, COLOR_WHITE, 1, 0);
       for (unsigned char i = 0; i < option_count; i++){
          if (i == list_index){
-            PrintXY(2, 3 + i, options[i], 0, TEXT_COLOR_BLACK);
-            PrintXY(1, 3 + i, "  >", 0, TEXT_COLOR_BLACK);
+            PrintCXY(22, (3 + i) * 20, options[i], 0, -1, COLOR_BLACK, COLOR_WHITE, 1, 0);
+            PrintCXY(1, (3 + i) * 20, ">", 0, -1, COLOR_BLACK, COLOR_WHITE, 1, 0);
          } else {
-            PrintXY(2, 3 + i, options[i], 0, TEXT_COLOR_BLUE);
-            PrintXY(1, 3 + i, "   ", 0, TEXT_COLOR_BLUE);
+            PrintCXY(22, (3 + i) * 20, options[i], 0, -1, COLOR_BLUE, COLOR_WHITE, 1, 0);
+            PrintCXY(1, (3 + i) * 20, " ", 0, -1, COLOR_BLUE, COLOR_WHITE, 1, 0);
          }
       }
       GetKey(&k);
@@ -198,7 +198,7 @@ unsigned char list_menu_ui(char* title, char* options[], unsigned char option_co
 
 void settings_menu_ui(int keybinds[12]){
    //settings
-   unsigned char option = list_menu_ui("  Settings", (char*[]){"  Keybinds", "  Brightness", "  Frameskip", "  Colour Palette", "  Overclock"}, 4);
+   unsigned char option = list_menu_ui("Settings", (char*[]){"Keybinds", "Brightness", "Frameskip", "Colour Palette", "Overclock"}, 4);
    switch(option){
       case 0://keybinds
          keybinds[4] = map_key_ui("  D-UP");
@@ -215,7 +215,7 @@ void settings_menu_ui(int keybinds[12]){
          keybinds[2] = map_key_ui("  SELECT");
          break;
       case 1://brightness
-         list_menu_ui("  Brightness", (char*[]){"  Ultra low", "  Low", "  Medium", "  High", "  Very high"}, 5);
+         list_menu_ui("Brightness", (char*[]){"Ultra low", "Low", "Medium", "High", "Very high"}, 5);
          break;
       case 2://frameskip
          break;
@@ -229,7 +229,7 @@ void settings_menu_ui(int keybinds[12]){
 
 Rom main_menu_ui(int keybinds[12]){
    while (1){
-      unsigned char menu_index = list_menu_ui("  Main menu", (char*[]){"  Settings", "  Load ROM", "  Exit"}, 3);
+      unsigned char menu_index = list_menu_ui("Main menu", (char*[]){"Settings", "Load ROM", "Exit"}, 3);
       switch (menu_index) {
          case 0:{
             settings_menu_ui(keybinds);
@@ -237,14 +237,14 @@ Rom main_menu_ui(int keybinds[12]){
          }
          case 1:{
             //load ROM
-            char* rom_selection_list[] = {sys_malloc(sizeof(char) * 16),sys_malloc(sizeof(char) * 16),sys_malloc(sizeof(char) * 16),sys_malloc(sizeof(char) * 16)};
+            char* rom_selection_list[] = {sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16),sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16)};
             byte rom_list_len;
             get_rom_list_fs(rom_selection_list, &rom_list_len);
             if(rom_selection_list == NULL || rom_list_len == 0){
                Bdisp_AllClr_VRAM();
                error_msg("  No ROMs");
             }
-            Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("  SELECT ROM", rom_selection_list, rom_list_len));
+            Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("SELECT ROM", rom_selection_list, rom_list_len));
             return selected_rom;
          }
          case 2:{
