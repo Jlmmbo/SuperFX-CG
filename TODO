@@ -1,6 +1,3 @@
-- Memory mapped hardware:
-    - apu regs ??
-    - expansion ??
 - properly handle/set P.V
 - peripherals:
     - ppu:
