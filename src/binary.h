@@ -1,11 +1,12 @@
 char vals[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
 //convert a byte into a string 
-void byte_to_str(byte b, char* dest){
-    if (!dest) return;
+char* byte_to_str(byte b, char* dest){
+    if (!dest) return NULL;
     dest[0] = vals[(unsigned char)b / 16];
     dest[1] = vals[(unsigned char)b % 16];
     dest[2] = '\0';
+    return dest;
 }
 
 //set and clear individual bits in a 

@@ -135,23 +135,26 @@ void PPU_dot(CPUState* cpu){
 }
 
 void generate_frame(CPUState* cpu){
+    uint16_t i;
     PPU ppu = cpu->ppu;
     for(ppu.v_cntr = 0; ppu.v_cntr < PPU_SCREEN_HEIGHT; ppu.v_cntr++){
         for(ppu.h_cntr = 0; ppu.h_cntr < PPU_SCREEN_WIDTH; ppu.h_cntr++){
-            Bdisp_AllClr_VRAM();
-            PrintXY(1, 1, "  cycle", 0, 0);
-            //GetKey(NULL);
             if(keydownlast(KEY_PRGM_MENU)) pause_menu_ui();
             PPU_dot(cpu);
             cycle_cpu(cpu);
+            put_disp();
         }
         cpu->IRQ = 1;//H_blank
-        for(uint16_t i = 0; i < 350; i++){
+        cycle_cpu(cpu);
+        cpu->IRQ = 0;
+        for(i = 0; i < 350; i++){
             cycle_cpu(cpu);
         }
     }
     cpu->IRQ = 1;//V_blank
-    for(uint16_t i = 0; i < 3500; i++){
+    cycle_cpu(cpu);
+    cpu->IRQ = 0;
+    for(i = 0; i < 350; i++){
         cycle_cpu(cpu);
     }
 }

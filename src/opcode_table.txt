@@ -5,7 +5,7 @@
 ---| a     | d     | s     | a     | r     | dx    | i     | ax    ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
 010| RTI 40| MVP 44| PHA 48| JMP 4C| BVC 50| MVN 54| CLI 58| JMP 5C||-------|| EOR 41| EOR 45| EOR 49| EOR 4D| EOR 51| EOR 55| EOR 59| EOR 5D|
 ---| s     | xyc   | s     | a     | r     | xyc   | i     | al    ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
-011| RTS 60| STZ 64| PLA 68| JMP 6C| BVS 70| STZ 74| SEI 78| JMP 7C||-------|| A    DC 61| ADC 65| ADC 69| ADC 6D| ADC 71| ADC 75| ADC 79| ADC 7D|
+011| RTS 60| STZ 64| PLA 68| JMP 6C| BVS 70| STZ 74| SEI 78| JMP 7C||-------|| ADC 61| ADC 65| ADC 69| ADC 6D| ADC 71| ADC 75| ADC 79| ADC 7D|
 ---| s     | d     | s     | ai    | r     | dx    | i     | axi   ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |
 100| BRA 80| STY 84| DEY 88| STY 8C| BCC 90| STY 94| TYA 98| STZ 9C||-------|| STA 81| STA 85| BIT 89| STA 8D| STA 91| STA 95| STA 99| STA 9D|
 ---| r     | d     | i     | a     | r     | dx    | i     | a     ||-------|| dxi   | d     | #     | a     | diy   | dx    | ay    | ax    |

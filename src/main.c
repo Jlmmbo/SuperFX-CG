@@ -21,6 +21,8 @@ int main(void) {
     Rom rom = main_menu_ui(keybinds);
     init_cpu(&cpu, rom);//rom gets loaded here
 
+    cycle_cpu(&cpu);
+
     int k;
     while (1) {
         keyupdate();

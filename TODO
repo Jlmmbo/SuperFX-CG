@@ -18,5 +18,4 @@
 - use macros to simplify instruction functions ?????
 - use timers to call ppu_dot and cycle_cpu (make sure to uninstall them before fs stuff and on exit)
 - possible (dangerous) optimization: for rom file, use ptr instead of handle to bypass 1mb read_file_os hang
-- use arithmetic type for addresses
 - fetch single pages (or last 5 for example) into ram if possible (not banks)

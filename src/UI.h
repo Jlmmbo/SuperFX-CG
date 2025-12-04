@@ -40,7 +40,7 @@ void put_disp_strip(unsigned, unsigned);
       *MSTPCR0&=~(1<<21);//Clear bit 21
       *DMA0_CHCR_0&=~1;//Disable DMA on channel 0
       *DMA0_DMAOR=0;//Disable all DMA
-      *DMA0_SAR_0=(GetVRAMAddress()+(y1*384*2))&0x1FFFFFFF;//Source address is VRAM
+      *DMA0_SAR_0=((int)(GetVRAMAddress()+(y1 * 384 * 2)) & 0x1FFFFFFF);//Source address is VRAM
       *DMA0_DAR_0=LCD_BASE&0x1FFFFFFF;//Destination is LCD
       *DMA0_TCR_0=((y2-y1+1)*384)/16;//Transfer count bytes/32
       *DMA0_CHCR_0=0x00101400;
@@ -48,12 +48,9 @@ void put_disp_strip(unsigned, unsigned);
       *DMA0_DMAOR&=~6;//Clear flags
       *DMA0_CHCR_0|=1;//Enable channel0 DMA
    }
-   void DoDMAlcdNonblock(void){
-      DoDMAlcdNonblockStrip(0,215);
-   }
 
    void put_disp(void){
-      put_disp_strip(0,216);
+      put_disp_strip(0,215);
    }
 #else
    void put_disp(void){
@@ -268,7 +265,7 @@ void pause_menu_ui(){
 
 void error_msg(char* msg){
    Bdisp_AllClr_VRAM();
-   PrintXY(1, 1, msg, 0, 0);
+   PrintCXY(1, 1, msg, 0, -1, 0, COLOR_WHITE, 1, 0);
    GetKey(NULL);
 }
 

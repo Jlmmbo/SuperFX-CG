@@ -3,7 +3,7 @@
 
 #include "overclock.h"
 
-//#define NON_BLOCK_DMA 1
+#define NON_BLOCK_DMA 1
 #define true (1)
 #define false (0)
 
@@ -105,8 +105,7 @@ int keydownhold(int basic_keycode) {
 
 typedef unsigned char byte;
 
-typedef struct
-{
+typedef struct{
   unsigned short id, type;
   unsigned long fsize, dsize;
   unsigned int property;
