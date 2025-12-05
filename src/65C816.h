@@ -35,15 +35,15 @@ void status_apply_mask(StatusReg* P, byte set_bits, byte clear_bits){
 
 
 void push(CPUState* cpu, byte val){
-    if (cpu->P.M == 0) cpu->mem[0][(cpu->S.h << 8) + cpu->S.l] = val;
-    else cpu->mem[0][cpu->S.l] = val;
+    if (cpu->P.M == 0) mem_set(cpu, val, (cpu->S.h << 8) + cpu->S.l);
+    else mem_set(cpu, val, cpu->S.l);
     cpu->S = sub_2_1(cpu->S, 0x01);//descending stack
 }
 
 byte pull(CPUState* cpu){
     cpu->S = add_2_1(cpu->S, 0x01);//??????????? if in emulation mode, does S.h decrement on page wrap?
-    if (cpu->P.M == 0) return cpu->mem[0][(cpu->S.h << 8) + cpu->S.l];
-    return cpu->mem[0][cpu->S.l];
+    if (cpu->P.M == 0) return mem_fetch(cpu,  (cpu->S.h << 8) + cpu->S.l);
+    return mem_fetch(cpu, cpu->S.l);
 }
 
 address inc_addr(address addr){
@@ -71,7 +71,7 @@ address mem_get_addr(address addr, byte rom_mode){
 byte mem_fetch(CPUState* cpu, address addr){
     addr = mem_get_addr(addr, cpu->rom_mode);
     if(cpu->mem[addr >> 16]==NULL){
-        cpu->mem[addr >> 16] = sys_malloc(65536 * sizeof(byte));
+        cpu->mem[addr >> 16] = (byte*)sys_malloc(65536 * sizeof(byte));
     }
     return cpu->mem[addr >> 16][addr & 0xFFFF];
 }
@@ -81,7 +81,7 @@ byte mem_fetch(CPUState* cpu, address addr){
 char mem_set(CPUState* cpu, byte value, address addr){
     addr = mem_get_addr(addr, cpu->rom_mode);
     if(cpu->mem[addr >> 16]==NULL){
-        cpu->mem[addr >> 16] = sys_malloc(65536 * sizeof(byte));
+        cpu->mem[addr >> 16] = (byte*)sys_malloc(65536 * sizeof(byte));
     }
     //todo: if addr would be rom, do nothing
     cpu->mem[addr >> 16][addr & 0xFFFF] = value;
@@ -107,7 +107,7 @@ char write_rom(CPUState* cpu, Rom rom){
         for (int i = 0x8000; i <= 0xFFFF; i++) {
             if (rom_offset < rom.size) {
                 //cpu->mem[bank][i] = rom.raw[rom_offset++];
-                mem_set(cpu, rom.raw[rom_offset++], (address){bank * 65536 + i});
+                mem_set(cpu, rom.raw[rom_offset++], (address){bank << 16 + i});
             //} else {
                 //cpu->mem[bank][i] = 0xFF;  // open bus
             }
@@ -147,6 +147,7 @@ void init_cpu(CPUState* cpu, Rom rom){
     if (err){//failed to allocate
         Bdisp_AllClr_VRAM();
         PrintXY(1, 1, "  GET MORE SPACE!!", 0, 0);
+        return;
     }
 
     //cpu->PC = (cpu->mem[0][0xFFFD] << 8) + cpu->mem[0][0xFFFC];
@@ -154,6 +155,7 @@ void init_cpu(CPUState* cpu, Rom rom){
 
     cpu->ppu.h_cntr = 0;
     cpu->ppu.v_cntr = 0;
+    mem_fetch(cpu, (VMADDH << 8) + VMADDL);//just to allocate the bank
     cpu->ppu.VRAM = (uint16_t*)&(cpu->mem[0x00][(VMADDH << 8) + VMADDL]);
 }
 
@@ -1163,7 +1165,9 @@ void DEX(CPUState* cpu, address addr){
 void WAI(CPUState* cpu, address addr){
     if (!(cpu->NMI | cpu->IRQ)) {
         cpu->PC--;
-        disp_cpu_stats(cpu);
+        keyupdate();
+        if(keydownlast(KEY_CTRL_MENU)) pause_menu_ui();
+        //disp_cpu_stats(cpu);
     }
 }
 
@@ -1608,7 +1612,7 @@ void cycle_cpu(CPUState* cpu){
 }
 
 void update_controller_register(CPUState* cpu, int keybinds[12]){
-    cpu->mem[00][0x4218] = (
+    mem_set(cpu,  (
     keydownlast(keybinds[0]) << 7 |//b
     keydownlast(keybinds[1]) << 6 |//y
     keydownlast(keybinds[2]) << 5 |//select
@@ -1617,13 +1621,13 @@ void update_controller_register(CPUState* cpu, int keybinds[12]){
     keydownlast(keybinds[5]) << 2 |//D-DOWN
     keydownlast(keybinds[6]) << 1 |//D-LEFT
     keydownlast(keybinds[7]) << 0 //D-RIGHT
-    );
-    cpu->mem[00][0x4219] = (
+    ), 0x4218);
+    mem_set(cpu, (
     keydownlast(keybinds[8]) << 7 |//A
     keydownlast(keybinds[9]) << 6 |//X
     keydownlast(keybinds[10]) << 5 |//L
     keydownlast(keybinds[11]) << 4 //R
-    );
+    ), 0x4219);
     keyupdate();
     if(keydownlast(KEY_CTRL_MENU)) pause_menu_ui();
 }

@@ -23,11 +23,9 @@ int main(void) {
 
     cycle_cpu(&cpu);
 
-    int k;
+    //int k;
     while (1) {
         keyupdate();
-
-        PrintXY(1, 2, "  running...", 0, 0);
 
         put_disp();
         if (keydownlast(KEY_CTRL_MENU)) break;
@@ -36,10 +34,5 @@ int main(void) {
 
         generate_frame(&cpu);
     }
-    Bdisp_AllClr_VRAM();
-    PrintXY(1, 1, "  Pausing", 0, 0);
-    put_disp();
-    GetKey(&k);
-    pause_menu_ui(&cpu);
     return 0;
 }

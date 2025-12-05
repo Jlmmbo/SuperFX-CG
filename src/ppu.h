@@ -2,7 +2,9 @@
 #define PPU_SCREEN_HEIGHT 261
 
 void set_SNES_pixel(byte x, byte y, color_t color){
-    ((color_t*)GetVRAMAddress())[y * LCD_WIDTH_PX + x] = color;
+    color_t* VRAM = (color_t*)GetVRAMAddress();
+    VRAM += y * LCD_WIDTH_PX + x;
+    *VRAM = color;
 }
 
 Tile fetch_tile(CPUState* cpu, byte bg, uint16_t tile_index, byte four_bpp){
@@ -32,7 +34,7 @@ void PPU_dot(CPUState* cpu){
     //Evaluate priorities for this dot
     
     uint16_t tilemap_addr;
-    byte flip;
+    //byte flip;
     uint16_t tile_index;
     uint16_t tilemap_entry;
     Tile tile;
@@ -51,68 +53,18 @@ void PPU_dot(CPUState* cpu){
     byte bg1_priority = (tilemap_entry & 0b0010000000000000) >> 13;
     byte bg1_palette = (tilemap_entry & 0b0001110000000000) >> 10;
     tile_index = tilemap_entry & 0b00000011111111;
-    flip = (tilemap_entry & 0b1100000000000000) >> 14;
+    //flip = (tilemap_entry & 0b1100000000000000) >> 14;
     tile = fetch_tile(cpu, 0, tile_index, 1);
-    byte bg1_px = tile.data[(flip & 0b10) ? (8-(BG1VOFS % 8)) : (BG1VOFS % 8)][(flip & 0b01) ? (8 - (BG1HOFS % 8)) : (BG1HOFS % 8)];
+    //byte bg1_px = tile.data[(flip & 0b10) ? (8-(BG1VOFS % 8)) : (BG1VOFS % 8)][(flip & 0b01) ? (8 - (BG1HOFS % 8)) : (BG1HOFS % 8)];
+    byte bg1_px = tile.data[BG1VOFS % 8][BG1HOFS % 8];
 
-    tilemap_addr = (BG2SC >> 2) * 0x800;
-    tilemap_entry = ppu->VRAM[tilemap_addr + (((ppu->v_cntr + BG2VOFS) / 8) * (32 + get_bit(BG2SC, 0) * 32)) + ((ppu->h_cntr + BG2HOFS) / 8)];
-    byte bg2_priority = (tilemap_entry & 0b0010000000000000) >> 13;
-    byte bg2_palette = (tilemap_entry & 0b0001110000000000) >> 10;
-    tile_index = tilemap_entry & 0b00000011111111;
-    flip = (tilemap_entry & 0b1100000000000000) >> 14;
-    tile = fetch_tile(cpu, 1, tile_index, 1);
-    byte bg2_px = tile.data[(flip & 0b10) ? (8-(BG2VOFS % 8)) : (BG2VOFS % 8)][(flip & 0b01) ? (8 - (BG2HOFS % 8)) : (BG2HOFS % 8)];
-
-    tilemap_addr = (BG3SC >> 2) * 0x800;
-    tilemap_entry = ppu->VRAM[tilemap_addr + (((ppu->v_cntr + BG3VOFS) / 8) * (32 + get_bit(BG3SC, 0) * 32)) + ((ppu->h_cntr + BG3HOFS) / 8)];
-    byte bg3_priority = (tilemap_entry & 0b0010000000000000) >> 13;
-    byte bg3_palette = (tilemap_entry & 0b0001110000000000) >> 10;
-    tile_index = tilemap_entry & 0b00000011111111;
-    flip = (tilemap_entry & 0b1100000000000000) >> 14;
-    tile = fetch_tile(cpu, 2, tile_index, 1);
-    byte bg3_px = tile.data[(flip & 0b10) ? (8-(BG3VOFS % 8)) : (BG3VOFS % 8)][(flip & 0b01) ? (8 - (BG3HOFS % 8)) : (BG3HOFS % 8)];
-
-    tilemap_addr = (BG4SC >> 2) * 0x800;
-    tilemap_entry = ppu->VRAM[tilemap_addr + (((ppu->v_cntr + BG4VOFS) / 8) * (32 + get_bit(BG4SC, 0) * 32)) + ((ppu->h_cntr + BG4HOFS) / 8)];
-    byte bg4_priority = (tilemap_entry & 0b0010000000000000) >> 13;
-    byte bg4_palette = (tilemap_entry & 0b0001110000000000) >> 10;
-    tile_index = tilemap_entry & 0b00000011111111;
-    flip = (tilemap_entry & 0b1100000000000000) >> 14;
-    tile = fetch_tile(cpu, 3, tile_index, 1);
-    byte bg4_px = tile.data[(flip & 0b10) ? (8-(BG4VOFS % 8)) : (BG4VOFS % 8)][(flip & 0b01) ? (8 - (BG4HOFS % 8)) : (BG4HOFS % 8)];
-
-
-    byte px = 0;// = BGCOLOR;
-    byte palette = 0;
+    byte px = bg1_px;// = BGCOLOR;
+    byte palette = bg1_palette;
     //placeholder, find a better way to implement priorities for multiple modes
-    if(bg1_priority){
-        if (bg1_px == 0){
-            if(bg2_priority){
-                if (bg2_px == 0){
-                    if(bg3_priority){
-                        if (bg3_px == 0){
-                            if(bg4_priority){
-                                if (bg4_px != 0) {
-                                    px = bg4_px;
-                                    palette = bg4_palette;
-                                }
-                            }
-                        } else {
-                            px = bg3_px;
-                            palette = bg3_palette;
-                        }
-                    }
-                } else {
-                    px = bg2_px;
-                    palette = bg2_palette;
-                }
-            }
-        } else {
+    /*if(bg1_priority){
             px = bg1_px;
             palette = bg1_palette;
-        }
-    }
+    }*/
 
     color_t color = ppu->VRAM[CGADD + palette * 16 + px];
     color = ((color & 0b0111110000000000) << 1) + ((color & 0b0000001111100000) << 1) + (color & 0b0000000000011111);//convert from rgb555 to rgb565
@@ -123,27 +75,20 @@ void PPU_dot(CPUState* cpu){
     //Output final pixel (256 visible dots only)
 
     //Update H/V counters
-    if(ppu->h_cntr >= PPU_SCREEN_WIDTH){
-        ppu->h_cntr = 0;
-        ppu->v_cntr++;
-    }
-    if(ppu->v_cntr >= PPU_SCREEN_HEIGHT){
-        ppu->v_cntr = 0;
-    }
 
     //Trigger scanline events if appropriate
 }
 
 void generate_frame(CPUState* cpu){
     uint16_t i;
-    PPU ppu = cpu->ppu;
-    for(ppu.v_cntr = 0; ppu.v_cntr < PPU_SCREEN_HEIGHT; ppu.v_cntr++){
-        for(ppu.h_cntr = 0; ppu.h_cntr < PPU_SCREEN_WIDTH; ppu.h_cntr++){
-            if(keydownlast(KEY_PRGM_MENU)) pause_menu_ui();
+    PPU* ppu = &(cpu->ppu);
+    for(ppu->v_cntr = 0; ppu->v_cntr < PPU_SCREEN_HEIGHT; ppu->v_cntr++){
+        for(ppu->h_cntr = 0; ppu->h_cntr < PPU_SCREEN_WIDTH; ppu->h_cntr++){
             PPU_dot(cpu);
             cycle_cpu(cpu);
-            put_disp();
         }
+        if(keydownlast(KEY_PRGM_MENU)) pause_menu_ui();
+        put_disp();
         cpu->IRQ = 1;//H_blank
         cycle_cpu(cpu);
         cpu->IRQ = 0;
