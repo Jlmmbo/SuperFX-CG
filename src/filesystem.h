@@ -9,7 +9,13 @@ Rom load_rom_fs(char** rom_list, byte rom_index){//may possibly hang for files l
     unsigned short file_name[50];
     Bfile_StrToName_ncpy(file_name, rom_list[rom_index], 49);
     int handle = Bfile_OpenFile_OS(file_name, 0, 0);
-    if(handle < 0) return test_rom;
+    if(handle < 0){
+        error_msg("ROM not found");
+        error_msg("There may be UB if you continue!");
+        error_msg("Returning to Main Menu");
+
+        return main_menu_ui();
+    }
     Rom rom;
     rom.size = Bfile_GetFileSize_OS(handle);
     rom.raw = sys_malloc(sizeof(byte) * rom.size);

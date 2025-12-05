@@ -234,6 +234,7 @@ Rom main_menu_ui(){
             if(rom_selection_list == NULL || rom_list_len == 0){
                Bdisp_AllClr_VRAM();
                error_msg("  No ROMs");
+               break;
             }
             Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("SELECT ROM", rom_selection_list, rom_list_len));
             return selected_rom;
@@ -247,7 +248,6 @@ Rom main_menu_ui(){
          }
       }
    }
-   return test_rom;
 }
 
 void pause_menu_ui(){

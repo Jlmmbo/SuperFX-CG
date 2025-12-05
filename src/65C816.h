@@ -121,9 +121,6 @@ char write_rom(Rom rom){
     return 0;
 }
 
-const Rom test_rom = {(byte[4096]){0x00}, 4096};
-
-
 /*start up cpu, initialize regs, set load interrupt vector etc.*/
 void init_cpu(Rom rom){
     CPUState* cpu = &CPU;
