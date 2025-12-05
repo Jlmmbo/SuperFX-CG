@@ -2,12 +2,6 @@
 
 //function prototypes
 
-int map_key_ui(char*);
-Rom main_menu_ui(int[12]);
-
-void put_disp(void);
-void put_disp_strip(unsigned, unsigned);
-
 #ifdef NON_BLOCK_DMA
    #define LCD_GRAM    0x202
    #define LCD_BASE    0xB4000000
@@ -193,7 +187,7 @@ unsigned char list_menu_ui(char* title, char* options[], unsigned char option_co
    return list_index;
 }
 
-void settings_menu_ui(int keybinds[12]){
+void settings_menu_ui(){
    //settings
    unsigned char option = list_menu_ui("Settings", (char*[]){"Keybinds", "Brightness", "Frameskip", "Colour Palette", "Overclock"}, 4);
    switch(option){
@@ -224,12 +218,12 @@ void settings_menu_ui(int keybinds[12]){
 }
 
 
-Rom main_menu_ui(int keybinds[12]){
+Rom main_menu_ui(){
    while (1){
       unsigned char menu_index = list_menu_ui("Main menu", (char*[]){"Settings", "Load ROM", "Exit"}, 3);
       switch (menu_index) {
          case 0:{
-            settings_menu_ui(keybinds);
+            settings_menu_ui();
             break;
          }
          case 1:{

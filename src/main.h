@@ -153,8 +153,14 @@ typedef struct instr_data{
 
 
 void put_disp(void);
+void put_disp_strip(unsigned, unsigned);
+
 void pause_menu_ui();
+int map_key_ui(char*);
+Rom main_menu_ui();
+
 void error_msg(char*);
+
 byte mem_fetch(address addr);
 char mem_set(byte value, address addr);
 

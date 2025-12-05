@@ -1751,7 +1751,7 @@ void cycle_cpu(){
     if(keydownlast(KEY_CTRL_MENU)) pause_menu_ui();
 }
 
-void update_controller_register(int keybinds[12]){
+void update_controller_register(){
     mem_set((
     keydownlast(keybinds[0]) << 7 |//b
     keydownlast(keybinds[1]) << 6 |//y
