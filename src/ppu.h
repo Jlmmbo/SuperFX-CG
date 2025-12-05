@@ -7,7 +7,8 @@ void set_SNES_pixel(byte x, byte y, color_t color){
     *VRAM = color;
 }
 
-Tile fetch_tile(CPUState* cpu, byte bg, uint16_t tile_index, byte four_bpp){
+Tile fetch_tile(byte bg, uint16_t tile_index, byte four_bpp){
+    CPUState* cpu = &CPU;
     PPU* ppu = &(cpu->ppu);
     Tile tile = {{{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},}};
     uint16_t nametable_addr;
@@ -29,7 +30,8 @@ Tile fetch_tile(CPUState* cpu, byte bg, uint16_t tile_index, byte four_bpp){
     return tile;
 }
 
-void PPU_dot(CPUState* cpu){
+void PPU_dot(){
+    CPUState* cpu = &CPU;
     PPU* ppu = &(cpu->ppu);
     //Evaluate priorities for this dot
     
@@ -54,7 +56,7 @@ void PPU_dot(CPUState* cpu){
     byte bg1_palette = (tilemap_entry & 0b0001110000000000) >> 10;
     tile_index = tilemap_entry & 0b00000011111111;
     //flip = (tilemap_entry & 0b1100000000000000) >> 14;
-    tile = fetch_tile(cpu, 0, tile_index, 1);
+    tile = fetch_tile(0, tile_index, 1);
     //byte bg1_px = tile.data[(flip & 0b10) ? (8-(BG1VOFS % 8)) : (BG1VOFS % 8)][(flip & 0b01) ? (8 - (BG1HOFS % 8)) : (BG1HOFS % 8)];
     byte bg1_px = tile.data[BG1VOFS % 8][BG1HOFS % 8];
 
@@ -79,7 +81,8 @@ void PPU_dot(CPUState* cpu){
     //Trigger scanline events if appropriate
 }
 
-void generate_frame(CPUState* cpu){
+void generate_frame(){
+    CPUState* cpu = &CPU;
     uint16_t i;
     PPU* ppu = &(cpu->ppu);
     for(ppu->v_cntr = 0; ppu->v_cntr < PPU_SCREEN_HEIGHT; ppu->v_cntr++){

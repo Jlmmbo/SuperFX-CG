@@ -17,11 +17,10 @@ int main(void) {
 
     int keybinds[12] = {KEY_CTRL_OPTN, KEY_CHAR_SQUARE, KEY_CTRL_F6, KEY_CTRL_F6, KEY_CTRL_UP, KEY_CTRL_DOWN, KEY_CTRL_LEFT, KEY_CTRL_RIGHT, KEY_CTRL_SHIFT, KEY_CTRL_ALPHA, KEY_CTRL_F1, KEY_CTRL_F2};//{B, Y, Select, Start, UP, DOWN, LEFT, RIGHT, A, X, L, R}
 
-    CPUState cpu;
     Rom rom = main_menu_ui(keybinds);
-    init_cpu(&cpu, rom);//rom gets loaded here
+    init_cpu(rom);//rom gets loaded here
 
-    cycle_cpu(&cpu);
+    cycle_cpu();
 
     //int k;
     while (1) {
@@ -30,9 +29,9 @@ int main(void) {
         put_disp();
         if (keydownlast(KEY_CTRL_MENU)) break;
         
-        update_controller_register(&cpu, keybinds);
+        update_controller_register(keybinds);
 
-        generate_frame(&cpu);
+        generate_frame();
     }
     return 0;
 }
