@@ -189,9 +189,15 @@ void quithandler(){
     change_freq(PLL_16x);
 }
 
+byte* mem_ptr(address addr){
+    CPUState* cpu = &CPU;
+    mem_fetch(addr);//to allocate if needed
+    return (byte*)&(cpu->mem[addr >> 16][addr & 0x00FFFF]);
+}
+
 #include "binary.h"
-#include "65C816.h"
 #include "dma.h"
+#include "65C816.h"
 #include "ppu.h"
 #include "filesystem.h"
 #include "UI.h"

@@ -90,6 +90,9 @@ void generate_frame(){
         }
         if(keydownlast(KEY_PRGM_MENU)) pause_menu_ui();
         put_disp();
+        for(i = 0; i < 8; i++){//decrement all hdma scanline counters
+            NLTRn(i)--;
+        }
         cpu->IRQ = 1;//H_blank
         cycle_cpu(cpu);
         cpu->IRQ = 0;

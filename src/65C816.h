@@ -93,12 +93,6 @@ char mem_set(byte value, address addr){
     return 0;
 }
 
-byte* mem_ptr(address addr){
-    CPUState* cpu = &CPU;
-    mem_fetch(addr);//to allocate if needed
-    return (byte*)&(cpu->mem[addr >> 16][addr & 0x00FFFF]);
-}
-
 /*
 Will write rom to proper memory banks/regions, 
 and allocate used non-rom banks (e.g. ram, sram, i/o &c.)
@@ -171,9 +165,22 @@ void init_cpu(Rom rom){
     mem_fetch((VMADDH << 8) + VMADDL);//just to allocate the bank
     ppu->VRAM = (uint16_t*)&(cpu->mem[0x00][(VMADDH << 8) + VMADDL]);
 
-    mem_set(0x00, 0x00420B);
-    mem_set(0x00, 0x00420C);
-    //mem_set(cpu,0x00,0x00);
+    MDMAEN = 0;
+    HDMAEN = 0;
+
+    for(byte i = 0; i < 8; i++){
+        DMAP(i) = 0xff;
+        BBADn(i) = 0xff;
+        A1TnH(i) = 0xff;
+        A1TnL(i) = 0xff;
+        A1Bn(i) = 0xff;
+        DASnH(i) = 0xff;
+        DASnL(i) = 0xff;
+        DASBn(i) = 0xff;
+        A2AnH(i) = 0xff;
+        A2AnL(i) = 0xff;
+        NLTRn(i) = 0xff;
+    }
 }
 
 //absolute
