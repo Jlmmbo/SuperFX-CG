@@ -1,20 +1,20 @@
 #define MDMAEN (*mem_ptr(0x420B))
 #define HDMAEN (*mem_ptr(0x420C))
-#define DMAP(n) (*mem_ptr(0x4300 + ((n) << 4)))
-#define BBADn(N) (*mem_ptr(0x4301 + ((n) << 4)))
-#define A1TnL(N) (*mem_ptr(0x4302 + ((n) << 4)))
-#define A1TnH(N) (*mem_ptr(0x4303 + ((n) << 4)))
-#define A1Bn(N) (*mem_ptr(0x4304 + ((n) << 4)))
+#define DMAP(n) (*mem_ptr(0x4300 + ((N) << 4)))
+#define BBADn(N) (*mem_ptr(0x4301 + ((N) << 4)))
+#define A1TnL(N) (*mem_ptr(0x4302 + ((N) << 4)))
+#define A1TnH(N) (*mem_ptr(0x4303 + ((N) << 4)))
+#define A1Bn(N) (*mem_ptr(0x4304 + ((N) << 4)))
 
-#define DASnL(N) (*mem_ptr(0x4305 + ((n) << 4)))
-#define DASnH(N) (*mem_ptr(0x4306 + ((n) << 4)))
-#define DASBn(N) (*mem_ptr(0x4307 + ((n) << 4)))
+#define DASnL(N) (*mem_ptr(0x4305 + ((N) << 4)))
+#define DASnH(N) (*mem_ptr(0x4306 + ((N) << 4)))
+#define DASBn(N) (*mem_ptr(0x4307 + ((N) << 4)))
 
-#define A2TnL(N) (*mem_ptr(0x4308 + ((n) << 4)))
+#define A2TnL(N) (*mem_ptr(0x4308 + ((N) << 4)))
 
-#define A2TnH(N) (*mem_ptr(0x4309 + ((n) << 4)))
+#define A2TnH(N) (*mem_ptr(0x4309 + ((N) << 4)))
 
-#define NLTRn(N) (*mem_ptr(0x430A + ((n) << 4)))
+#define NLTRn(N) (*mem_ptr(0x430A + ((N) << 4)))
 
 //#define UNUSEDn(N) (*mem_ptr(cpu, 0x4300 + ((n) << 4)))
 
