@@ -89,6 +89,11 @@ char mem_set(CPUState* cpu, byte value, address addr){
     return 0;
 }
 
+byte* mem_ptr(CPUState* cpu, address addr){
+    mem_fetch(cpu, addr);//to allocate if needed
+    return (byte*)&(cpu->mem[addr >> 16][addr & 0x00FFFF]);
+}
+
 /*
 Will write rom to proper memory banks/regions, 
 and allocate used non-rom banks (e.g. ram, sram, i/o &c.)
@@ -1593,10 +1598,7 @@ const instr_data instructions[] = {
 returns 0 for success; 1: somehow illegal opcode; 2:...*/
 char run_instr_cpu(CPUState* cpu){
     byte instr = mem_fetch(cpu, (cpu->PBR << 16) + cpu->PC);
-    char* buf = "                 ";
-    byte_to_str(instr, buf);
-    error_msg(buf);
-    put_disp();
+    //put_disp();
     cpu->PC++;
     instr_data instruction = instructions[instr];
     address addr = instruction.addr_func(cpu);
