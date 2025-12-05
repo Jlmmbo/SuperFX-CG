@@ -133,6 +133,7 @@ const Rom test_rom = {(byte[4096]){0x00}, 4096};
 /*start up cpu, initialize regs, set load interrupt vector etc.*/
 void init_cpu(Rom rom){
     CPUState* cpu = &CPU;
+    PPUState* ppu = &PPU;
     for (int i = 0; i < 256; i++){
         cpu->mem[i] = NULL;
     }
@@ -165,10 +166,10 @@ void init_cpu(Rom rom){
     //cpu->PC = (cpu->mem[0][0xFFFD] << 8) + cpu->mem[0][0xFFFC];
     cpu->PC = (mem_fetch(0x00fffd) << 8) + mem_fetch(0x00fffc);
 
-    cpu->ppu.h_cntr = 0;
-    cpu->ppu.v_cntr = 0;
+    ppu->h_cntr = 0;
+    ppu->v_cntr = 0;
     mem_fetch((VMADDH << 8) + VMADDL);//just to allocate the bank
-    cpu->ppu.VRAM = (uint16_t*)&(cpu->mem[0x00][(VMADDH << 8) + VMADDL]);
+    ppu->VRAM = (uint16_t*)&(cpu->mem[0x00][(VMADDH << 8) + VMADDL]);
 
     mem_set(0x00, 0x00420B);
     mem_set(0x00, 0x00420C);

@@ -114,11 +114,11 @@ typedef struct Tile{
    byte data[8][8];
 }Tile;
 
-typedef struct PPU{
+typedef struct PPUState{
     unsigned short h_cntr;//maybe fit into a byte
     unsigned short v_cntr;//maybe fit into a byte
     uint16_t* VRAM;
-}PPU;
+}PPUState;
 
 typedef struct CPUState{
     byte NMI:1;
@@ -134,11 +134,11 @@ typedef struct CPUState{
     byte DBR;//data bank register
     byte PBR;//program bank register
     byte* mem[256];//mem bank pointers
-    PPU ppu;
     unsigned int rom_mode;
 }CPUState;
 
 CPUState CPU;
+PPUState PPU;
 
 typedef struct Rom{
     byte* raw;

@@ -8,8 +8,7 @@ void set_SNES_pixel(byte x, byte y, color_t color){
 }
 
 Tile fetch_tile(byte bg, uint16_t tile_index, byte four_bpp){
-    CPUState* cpu = &CPU;
-    PPU* ppu = &(cpu->ppu);
+    PPUState* ppu = &PPU;
     Tile tile = {{{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},}};
     uint16_t nametable_addr;
     if(bg == 0){
@@ -31,8 +30,7 @@ Tile fetch_tile(byte bg, uint16_t tile_index, byte four_bpp){
 }
 
 void PPU_dot(){
-    CPUState* cpu = &CPU;
-    PPU* ppu = &(cpu->ppu);
+    PPUState* ppu = &PPU;
     //Evaluate priorities for this dot
     
     uint16_t tilemap_addr;
@@ -83,8 +81,8 @@ void PPU_dot(){
 
 void generate_frame(){
     CPUState* cpu = &CPU;
+    PPUState* ppu = &PPU;
     uint16_t i;
-    PPU* ppu = &(cpu->ppu);
     for(ppu->v_cntr = 0; ppu->v_cntr < PPU_SCREEN_HEIGHT; ppu->v_cntr++){
         for(ppu->h_cntr = 0; ppu->h_cntr < PPU_SCREEN_WIDTH; ppu->h_cntr++){
             PPU_dot(cpu);
