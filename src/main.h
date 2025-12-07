@@ -160,6 +160,7 @@ int map_key_ui(char*);
 Rom main_menu_ui();
 
 void error_msg(char*);
+void disp_msg(char*);
 
 byte mem_fetch(address addr);
 char mem_set(byte value, address addr);
