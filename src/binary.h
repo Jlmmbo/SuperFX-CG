@@ -9,6 +9,15 @@ char* byte_to_str(byte b, char* dest){
     return dest;
 }
 
+char* bytes_to_str(address b, char* dest){
+    if (!dest) return NULL;
+    for(byte i = 0; i < 6; i++){
+        dest[i] = vals[(b & (0b1111 << (4 * i))) >> (4 * i)];
+    }
+    dest[6] = '\0';
+    return dest;
+}
+
 //set and clear individual bits in a 
 byte apply_mask(byte val, byte set_bits, byte clear_bits){
     return (val | set_bits) & clear_bits;
