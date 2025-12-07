@@ -50,7 +50,7 @@ void PPU_dot(){
 
     tilemap_addr = (BG1SC >> 2) * 0x800;
     tilemap_entry = ppu->VRAM[tilemap_addr + (((ppu->v_cntr + BG1VOFS) / 8) * (32 + get_bit(BG1SC, 0) * 32)) + ((ppu->h_cntr + BG1HOFS) / 8)];
-    byte bg1_priority = (tilemap_entry & 0b0010000000000000) >> 13;
+    //byte bg1_priority = (tilemap_entry & 0b0010000000000000) >> 13;
     byte bg1_palette = (tilemap_entry & 0b0001110000000000) >> 10;
     tile_index = tilemap_entry & 0b00000011111111;
     //flip = (tilemap_entry & 0b1100000000000000) >> 14;
