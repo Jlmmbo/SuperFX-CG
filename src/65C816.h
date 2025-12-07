@@ -99,25 +99,31 @@ and allocate used non-rom banks (e.g. ram, sram, i/o &c.)
 also mirror proper banks*/
 char write_rom(Rom rom){
     CPUState* cpu = &CPU;
-    //cpu->rom_mode = 0x00;
-    if (rom.raw[0x007fc0] == 0) cpu->rom_mode = 0;//LoROM
-    else if (rom.raw[0x00ffc0] == 1) cpu->rom_mode = 1;//HiROM
-    else if (rom.raw[0x40ffc0] == 5) cpu->rom_mode = 5;//ExHiROM
-    else cpu->rom_mode = 0;//LoROM to be safe
-    int rom_offset = 0;
+    cpu->rom_mode = 0x00;
 
-    //initialize ram banks
+    if (rom.size > 0x007fc0 && rom.raw[0x007fc0] == 0){
+        cpu->rom_mode = 0;//LoROM
+    }
+    else if (rom.size > 0x00fc0 && rom.raw[0x00ffc0] == 1){
+        cpu->rom_mode = 1;//HiROM
+    }
+    else if (rom.size > 0x40ffc0 && rom.raw[0x40ffc0] == 5){
+        cpu->rom_mode = 5;//ExHiROM
+    }
+    //error_msg("rom mode found");
+    //address rom_offset = 0;
 
-    for (int bank = 0x00; bank <= 0x7D; bank++) {
-        for (int i = 0x8000; i <= 0xFFFF; i++) {
+    //todo: initialize ram banks
+    /*for (byte bank = 0x00; bank <= 0x7D; bank++) {
+        for (uint16_t i = 0x8000; i <= 0xFFF; i++) {
+            //disp_msg(byte_to_str(rom_offset >> 8, tmp));
             if (rom_offset < rom.size) {
-                //cpu->mem[bank][i] = rom.raw[rom_offset++];
-                mem_set(rom.raw[rom_offset++], (address){(bank << 16) + i});
+                mem_set(rom.raw[rom_offset++], (bank << 16) + i);
             //} else {
                 //cpu->mem[bank][i] = 0xFF;  // open bus
             }
         }
-    }
+    }*/
     return 0;
 }
 
@@ -125,8 +131,14 @@ char write_rom(Rom rom){
 void init_cpu(Rom rom){
     CPUState* cpu = &CPU;
     PPUState* ppu = &PPU;
+    disp_msg("allocating space...");
     for (int i = 0; i < 256; i++){
-        cpu->mem[i] = NULL;
+        for (int j = 0; j < 65536; j++){
+            cpu->mem[i][j] = 0;
+        }
+    }
+    for (int i = 0; i < 256; i++){//double check all banks are allocated
+        mem_fetch(i << 16);
     }
 
     cpu->E = 1;

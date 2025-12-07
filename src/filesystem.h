@@ -7,7 +7,12 @@
 
 Rom load_rom_fs(char** rom_list, byte rom_index){//may possibly hang for files larger that 1mb
     unsigned short file_name[50];
-    Bfile_StrToName_ncpy(file_name, rom_list[rom_index], 49);
+
+    char char_filename [100]= "\\\\fls0\\";
+    strcat(char_filename, rom_list[rom_index]);
+    
+    Bfile_StrToName_ncpy(file_name, char_filename, 49);
+
     int handle = Bfile_OpenFile_OS(file_name, 0, 0);
     if(handle < 0){
         error_msg("ROM not found");
