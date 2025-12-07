@@ -73,6 +73,10 @@ address mem_get_addr(address addr, byte rom_mode){
 byte mem_fetch(address addr){
     CPUState* cpu = &CPU;
     addr = mem_get_addr(addr, cpu->rom_mode);
+    byte bank = addr >> 16;
+    if((bank < 0x3F) && ((addr & 0x00FFFF) > 0x8000)){//is a rom sector
+        return cpu->rom->raw[(bank & 0x7F) * 0x8000 + (addr & 0x7FFF)];
+    }
     if(cpu->mem[addr >> 16]==NULL){
         cpu->mem[addr >> 16] = (byte*)sys_malloc(65536 * sizeof(byte));
     }
@@ -84,6 +88,9 @@ byte mem_fetch(address addr){
 char mem_set(byte value, address addr){
     CPUState* cpu = &CPU;
     addr = mem_get_addr(addr, cpu->rom_mode);
+    if(((addr >> 16) < 0x3F) && ((addr & 0x00FFFF) > 0x8000)){//is a rom sector
+        return 0;
+    }
     if(cpu->mem[addr >> 16]==NULL){
         cpu->mem[addr >> 16] = (byte*)sys_malloc(65536 * sizeof(byte));
     }
@@ -159,6 +166,7 @@ void init_cpu(Rom rom){
     cpu->P.I = 1;
     cpu->P.E = 1;//set to emulation mode
     
+    cpu->rom = &rom;
     char err = write_rom(rom);
     if (err){//failed to allocate
         Bdisp_AllClr_VRAM();
