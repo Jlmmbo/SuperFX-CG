@@ -120,6 +120,11 @@ typedef struct PPUState{
     uint16_t* VRAM;
 }PPUState;
 
+typedef struct Rom{
+    byte* raw;
+    long int size:24;//long to ensure at least 24 bits reg. int may only be 16
+}Rom;
+
 typedef struct CPUState{
     byte NMI:1;
     byte IRQ:1;
@@ -135,15 +140,11 @@ typedef struct CPUState{
     byte PBR;//program bank register
     byte* mem[256];//mem bank pointers
     unsigned int rom_mode;
+    Rom* rom;
 }CPUState;
 
 CPUState CPU;
 PPUState PPU;
-
-typedef struct Rom{
-    byte* raw;
-    long int size:24;//long to ensure at least 24 bits reg. int may only be 16
-}Rom;
 
 typedef struct instr_data{
     address (*addr_func)();//function to calculate effective address
