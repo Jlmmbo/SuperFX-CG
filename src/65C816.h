@@ -80,6 +80,35 @@ byte mem_fetch(address addr){
     if(cpu->mem[addr >> 16]==NULL){
         cpu->mem[addr >> 16] = (byte*)sys_malloc(65536 * sizeof(byte));
     }
+    if((addr >= 0x2100) || (addr <= 0x21FF)){//MMIO regs
+        if(addr == 0x213B){//CGDATAREAD
+            if(cgram_byte){
+                cgram_byte = 0;
+                return ppu_CGRAM[CGADD] >> 8;
+            } else {
+                cgram_byte = 1;
+                return ppu_CGRAM[CGADD] & 0xFF;
+            }
+        }
+        if(addr == 0x213A){//VMDATAHREAD
+            uint16_t val = vram_latch >> 8;
+            if (VMAIN >> 7){
+                vram_latch = ppu_VRAM[(VMADDH << 8) | VMADDL];
+                VMADDH += ((VMADDL + VMAIN_inc_amt[VMAIN & 0b11]) < VMADDL) ? 1 : 0;
+                VMADDL += VMAIN_inc_amt[VMAIN & 0b11];
+            }
+            return val;
+        }
+        if(addr == 0x2139){//VMDATALREAD
+            uint16_t val = vram_latch & 0xFF;
+            if (!(VMAIN >> 7)){
+                vram_latch = ppu_VRAM[(VMADDH << 8) | VMADDL];
+                VMADDH += ((VMADDL + VMAIN_inc_amt[VMAIN & 0b11]) < VMADDL) ? 1 : 0;
+                VMADDL += VMAIN_inc_amt[VMAIN & 0b11];
+            }
+            return val;
+        }
+    }
     return cpu->mem[addr >> 16][addr & 0xFFFF];
 }
 
@@ -93,6 +122,25 @@ char mem_set(byte value, address addr){
     }
     if(cpu->mem[addr >> 16]==NULL){
         cpu->mem[addr >> 16] = (byte*)sys_malloc(65536 * sizeof(byte));
+    }
+    if(addr > 0x2100 && addr < 0x21FF){//MMIO regs
+        if(addr == 0x2118 || addr == 0x2119){//VMDATA
+            ppu_VRAM[(VMADDH << 8) + VMADDL] = (VMDATAH << 8) + VMDATAL;
+            if ((addr == 0x2118 && !(VMAIN >> 7)) || (addr == 0x2119 && (VMAIN >> 7))){
+                VMADDH += ((VMADDL + VMAIN_inc_amt[VMAIN & 0b11]) < VMADDL) ? 1 : 0;
+                VMADDL += VMAIN_inc_amt[VMAIN & 0b11];
+            }
+        }
+        if(addr == 0x2122){//CGDATA
+            if(cgram_byte){
+                ppu_CGRAM[CGADD] = (CGDATA << 8) | cgram_latch;
+                cgram_byte = 0;
+            } else {
+                cgram_latch = CGDATA;
+                cgram_byte = 1;
+            }
+        }
+        if(addr == 0x2121) cgram_byte = 0;//CGADD
     }
     //todo: if addr would be rom, do nothing
     cpu->mem[addr >> 16][addr & 0xFFFF] = value;
@@ -180,7 +228,12 @@ void init_cpu(Rom rom){
     ppu->h_cntr = 0;
     ppu->v_cntr = 0;
     mem_fetch((VMADDH << 8) + VMADDL);//just to allocate the bank
-    ppu->VRAM = (uint16_t*)&(cpu->mem[0x00][(VMADDH << 8) + VMADDL]);
+    ppu_VRAM = sys_malloc(sizeof(byte) * 65536);
+    ppu_CGRAM = sys_malloc(sizeof(byte) * 512);
+    ppu_TILES = sys_malloc(sizeof(Tile) * 4096);
+    cgram_byte = 1;
+    cgram_latch = 0;
+    vram_latch = 0;
 
     MDMAEN = 0;
     HDMAEN = 0;

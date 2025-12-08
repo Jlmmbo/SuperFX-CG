@@ -117,7 +117,6 @@ typedef struct Tile{
 typedef struct PPUState{
     unsigned short h_cntr;//maybe fit into a byte
     unsigned short v_cntr;//maybe fit into a byte
-    uint16_t* VRAM;
 }PPUState;
 
 typedef struct Rom{
@@ -169,6 +168,17 @@ char mem_set(byte value, address addr);
 const unsigned short* keyboard_register = (unsigned short*)0xA44B0000;
 unsigned short lastkey[8];
 unsigned short holdkey[8];
+
+uint16_t* ppu_VRAM;
+uint16_t* ppu_CGRAM;
+Tile* ppu_TILES;
+
+byte VMAIN_inc_amt[4] = {1, 32, 128, 128};
+
+byte cgram_byte;
+byte cgram_latch;
+
+uint16_t vram_latch;
 
 void keyupdate(void) {
    memcpy(holdkey, lastkey, sizeof(unsigned short)*8);

@@ -17,3 +17,4 @@
 - a better way to deal with 8/16 bit values when in native/emulation mode
 - use macros to simplify instruction functions ?????
 - use timers to call ppu_dot and cycle_cpu (make sure to uninstall them before fs stuff and on exit)
+- implement open bus behavior
