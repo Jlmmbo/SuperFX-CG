@@ -59,9 +59,11 @@ void get_rom_list_fs(char** rom_list, byte* len){
         int err = Bfile_FindNext(FindHandle, FoundFile, &fileinfo);
         if (err == -16){// no more files
             Bfile_FindClose(FindHandle);
+            sys_free(FoundFile);
             return;
         } else if (err < 0){
             error_msg("  path ERROR");
+            sys_free(FoundFile);
             return;
         }
         if (err == 0){
@@ -70,5 +72,6 @@ void get_rom_list_fs(char** rom_list, byte* len){
             (*len)++;
         }
     }
+    sys_free(FoundFile);
     Bfile_FindClose(FindHandle);
 }
