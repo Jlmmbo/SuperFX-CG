@@ -68,17 +68,22 @@ address mem_get_addr(address addr, byte rom_mode){
     return addr;
 }
 
+address conv_cpu_to_rom_addr(address addr){
+    if (addr < 0x8000) return 0;//not mapped to rom
+    return (addr >> 16) * 0x8000 + ((addr & 0xFFFF) - 0x8000);
+}
+
 /*Fetch memory from address in bank.
  If bank has not already been allocated, calls sys_malloc()*/
 byte mem_fetch(address addr){
     CPUState* cpu = &CPU;
     if((addr & 0x00FFFF) > 0x8000){//is a rom sector
-        return cpu->rom->raw[((addr >> 16) & 0x7F) * 0x8000 + (addr & 0x7FFF)];
+        return cpu->rom->raw[(conv_cpu_to_rom_addr(addr))];
     }
     addr = mem_get_addr(addr, cpu->rom_mode);
     byte bank = addr >> 16;
-    if(cpu->mem[addr >> 16]==NULL){
-        cpu->mem[addr >> 16] = (byte*)sys_malloc(65536 * sizeof(byte));
+    if(cpu->mem[bank]==NULL){
+        cpu->mem[bank] = (byte*)sys_malloc(65536 * sizeof(byte));
     }
     if((addr >= 0x2100) || (addr <= 0x21FF)){//MMIO regs
         if(addr == 0x213B){//CGDATAREAD
