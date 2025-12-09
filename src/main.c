@@ -17,7 +17,13 @@ int main(void) {
 
     //optional overclock if needed
     //change_freq(PLL_18x);
-
+    for(byte i = 0; i < 128; i++){
+        CPU.mem[i] = sys_malloc(32768);//bottom half is rom, no need to allocate
+        if(CPU.mem[i] == NULL) {
+            error_msg("cant alloc ram bank");
+            error_msg(byte_to_str(i, tmp));
+        }
+    }
     Rom rom;
     main_menu_ui(&rom);
     uint16_t vram_local[32768];

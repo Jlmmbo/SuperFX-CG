@@ -183,7 +183,7 @@ byte cgram_latch;
 
 uint16_t vram_latch;
 
-char tmp[100];
+char tmp[50];
 
 void keyupdate(void) {
    memcpy(holdkey, lastkey, sizeof(unsigned short)*8);

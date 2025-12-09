@@ -22,9 +22,12 @@ void load_rom_fs(char** rom_list, byte rom_index, Rom* rom){//may possibly hang 
         return;
     }
     rom->size = Bfile_GetFileSize_OS(handle);
-    rom->raw = sys_malloc(sizeof(byte) * rom->size);
-    Bfile_ReadFile_OS(handle, rom->raw, rom->size, 0);
+    rom->raw = sys_malloc(rom->size);
+    if(rom->raw == NULL) error_msg("couldnt alloc raw");
+    Bfile_ReadFile_OS(handle, rom->raw, 100, 0);
     Bfile_CloseFile_OS(handle);
+    if(rom->raw == NULL) error_msg("couldnt read rom");
+    disp_rom(rom);
 }
 
 void get_rom_list_fs(char** rom_list, byte* len){
