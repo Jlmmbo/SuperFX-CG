@@ -275,6 +275,41 @@ void disp_msg(char* msg){
    LoadVRAM_1();
 }
 
+void disp_rom(Rom* rom){
+   Bdisp_AllClr_VRAM();
+   byte x = 0;
+   uint16_t y = 0;
+   int k = 0;
+   byte i, j;
+   while(1){
+      Bdisp_AllClr_VRAM();
+      for(i = 0; i < 8; i++){
+         for(j = 0; j < 8; j++){
+            PrintCXY(i * 30, j * 30, byte_to_str(rom->raw[(y+j) * 8+ (x+i)], tmp), TEXT_MODE_NORMAL, -1, COLOR_BLACK, COLOR_WHITE, 1, 0);
+            PrintCXY(i * 15 + 240, j * 30, (char*)&rom->raw[(y+j) * 8+ (x+i)], TEXT_MODE_NORMAL, -1, COLOR_BLACK, COLOR_WHITE, 1, 0);
+         }
+      }
+      GetKey(&k);
+      if(k ==KEY_CTRL_UP){
+         if(y == 0) y = rom->size;
+         else y--;
+      }
+      if(k == KEY_CTRL_DOWN){
+         if(y >= rom->size - 1) y = 0;
+         else y++;
+      }
+      if(k == KEY_CTRL_LEFT){
+         if(x == 0) y = 7;
+         else x--;
+      }
+      if(k == KEY_CTRL_RIGHT){
+         if(y >= 7) y = 0;
+         else x++;
+      }
+      if(k == KEY_CTRL_EXIT) break;
+   }
+}
+
 //not done
 
 // void pause_menu_ui(CPUState* cpu){

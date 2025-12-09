@@ -162,6 +162,8 @@ void pause_menu_ui();
 int map_key_ui(char*);
 void main_menu_ui(Rom* rom);
 
+void disp_rom(Rom* rom);
+
 void error_msg(char*);
 void disp_msg(char*);
 
