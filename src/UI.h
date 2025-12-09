@@ -258,17 +258,21 @@ void pause_menu_ui(){
 }
 
 void error_msg(char* msg){
+   SaveVRAM_1();
    Bdisp_AllClr_VRAM();
    PrintCXY(1, 1, msg, 0, -1, 0, COLOR_WHITE, 1, 0);
    GetKey(NULL);
+   LoadVRAM_1();
 }
 
 void disp_msg(char* msg){
+   SaveVRAM_1();
    Bdisp_AllClr_VRAM();
    PrintCXY(1, 1, msg, 0, -1, 0, COLOR_WHITE, 1, 0);
    keyupdate();
    if(keydownlast(KEY_CTRL_AC)) GetKey(NULL);
    put_disp();
+   LoadVRAM_1();
 }
 
 //not done

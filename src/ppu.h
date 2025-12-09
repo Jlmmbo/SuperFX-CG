@@ -7,7 +7,18 @@ void set_SNES_pixel(color_t color){
     *VRAM = color;
 }
 
-
+void update_TILES(){
+    error_msg("update tiles");
+    Tile tile;
+    for(uint16_t i = 0; i < 1024; i++){
+        for(byte x = 0; x < 8; x++){
+            for(byte y = 0; y < 8; y++){
+                tile.data[y][x] = PPU.VRAM[((BG12NBA & 0b11111100) << 8/*or 10*/) + y * 32 + x];
+            }
+        }
+        PPU.TILES[i] = tile;
+    }
+}
 
 void PPU_dot(){
     PPUState* ppu = &PPU;
@@ -27,7 +38,7 @@ void PPU_dot(){
     byte tile_x = sx >> 3;
     byte tile_y = sy >> 3;
 
-    tilemap_entry = ppu_VRAM[tilemap_addr + tile_y * map_width + tile_x];
+    tilemap_entry = PPU.VRAM[tilemap_addr + tile_y * map_width + tile_x];
     uint16_t tile = tilemap_entry & 0x3FF;
     byte palette = (tilemap_entry >> 10) & 7;
     byte priority = (tilemap_entry >> 13) & 1;
@@ -37,7 +48,8 @@ void PPU_dot(){
     byte px = hflip ? (7 - (sx & 7)) : (sx & 7);
     byte py = vflip ? (7 - (sy & 7)) : (sy & 7);
 
-    byte color_index = ppu_TILES[tile].data[py][px];
+    //byte color_index = ppu_VRAM[(BG12NBA & 0x0F) << 10]
+    byte color_index = PPU.TILES[tile].data[py][px];
 
     uint16_t color = 0x00;//set to default bg color
 
@@ -46,10 +58,11 @@ void PPU_dot(){
             px = bg1_px;
             palette = bg1_palette;
     }*/
+    color_t palet[] = {0x0000, 0xF800, 0x07E0, 0x001F, 0xFFE0, 0x008F, 0xFFFF, 0x0000};
+    //color = ppu_CGRAM[palette + color_index];
+    color = palet[color_index];
 
-    color = ppu_CGRAM[palette + color_index];
-
-    color = ((color & 0b011111111100000) << 1) + (color & 0b0000000000011111);//convert from rgb555 to rgb565
+    //color = ((color & 0b011111111100000) << 1) + (color & 0b0000000000011111);//convert from rgb555 to rgb565
     set_SNES_pixel(color);
 
     //Apply window masks

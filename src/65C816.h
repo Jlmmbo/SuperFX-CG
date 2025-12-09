@@ -84,16 +84,16 @@ byte mem_fetch(address addr){
         if(addr == 0x213B){//CGDATAREAD
             if(cgram_byte){
                 cgram_byte = 0;
-                return ppu_CGRAM[CGADD] >> 8;
+                return PPU.CGRAM[CGADD] >> 8;
             } else {
                 cgram_byte = 1;
-                return ppu_CGRAM[CGADD] & 0xFF;
+                return PPU.CGRAM[CGADD] & 0xFF;
             }
         }
         if(addr == 0x213A){//VMDATAHREAD
             uint16_t val = vram_latch >> 8;
             if (VMAIN >> 7){
-                vram_latch = ppu_VRAM[(VMADDH << 8) | VMADDL];
+                vram_latch = PPU.VRAM[(VMADDH << 8) | VMADDL];
                 VMADDH += ((VMADDL + VMAIN_inc_amt[VMAIN & 0b11]) < VMADDL) ? 1 : 0;
                 VMADDL += VMAIN_inc_amt[VMAIN & 0b11];
             }
@@ -102,7 +102,7 @@ byte mem_fetch(address addr){
         if(addr == 0x2139){//VMDATALREAD
             uint16_t val = vram_latch & 0xFF;
             if (!(VMAIN >> 7)){
-                vram_latch = ppu_VRAM[(VMADDH << 8) | VMADDL];
+                vram_latch = PPU.VRAM[(VMADDH << 8) | VMADDL];
                 VMADDH += ((VMADDL + VMAIN_inc_amt[VMAIN & 0b11]) < VMADDL) ? 1 : 0;
                 VMADDL += VMAIN_inc_amt[VMAIN & 0b11];
             }
@@ -125,7 +125,8 @@ char mem_set(byte value, address addr){
     }
     if(addr > 0x2100 && addr < 0x21FF){//MMIO regs
         if(addr == 0x2118 || addr == 0x2119){//VMDATA
-            ppu_VRAM[(VMADDH << 8) + VMADDL] = (VMDATAH << 8) + VMDATAL;
+            PPU.VRAM[(VMADDH << 8) + VMADDL] = (VMDATAH << 8) + VMDATAL;
+            update_TILES();
             if ((addr == 0x2118 && !(VMAIN >> 7)) || (addr == 0x2119 && (VMAIN >> 7))){
                 VMADDH += ((VMADDL + VMAIN_inc_amt[VMAIN & 0b11]) < VMADDL) ? 1 : 0;
                 VMADDL += VMAIN_inc_amt[VMAIN & 0b11];
@@ -133,7 +134,7 @@ char mem_set(byte value, address addr){
         }
         if(addr == 0x2122){//CGDATA
             if(cgram_byte){
-                ppu_CGRAM[CGADD] = (CGDATA << 8) | cgram_latch;
+                PPU.CGRAM[CGADD] = (CGDATA << 8) | cgram_latch;
                 cgram_byte = 0;
             } else {
                 cgram_latch = CGDATA;
@@ -187,14 +188,14 @@ void init_cpu(Rom rom){
     CPUState* cpu = &CPU;
     PPUState* ppu = &PPU;
     disp_msg("allocating space...");
-    for (int i = 0; i < 256; i++){
+    /*for (int i = 0; i < 0x7F; i++){
         for (int j = 0; j < 65536; j++){
             cpu->mem[i][j] = 0;
         }
     }
-    for (int i = 0; i < 256; i++){//double check all banks are allocated
+    for (int i = 0; i < 0x7F; i++){//double check all banks are allocated
         mem_fetch(i << 16);
-    }
+    }*/
 
     cpu->E = 1;
     
@@ -228,9 +229,14 @@ void init_cpu(Rom rom){
     ppu->h_cntr = 0;
     ppu->v_cntr = 0;
     mem_fetch((VMADDH << 8) + VMADDL);//just to allocate the bank
-    ppu_VRAM = sys_malloc(sizeof(byte) * 65536);
-    ppu_CGRAM = sys_malloc(sizeof(byte) * 512);
-    ppu_TILES = sys_malloc(sizeof(Tile) * 4096);
+
+    for(uint16_t i = 0; i < 4096; i++){
+        for(byte x = 0; x < 8; x++){
+            for(byte y = 0; y < 8; y++){
+                PPU.TILES[i].data[y][x] = 0;
+            }
+        }
+    }
     cgram_byte = 1;
     cgram_latch = 0;
     vram_latch = 0;

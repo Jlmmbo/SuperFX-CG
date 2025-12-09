@@ -11,6 +11,7 @@ int keybinds[12] = {KEY_CTRL_OPTN, KEY_CHAR_SQUARE, KEY_CTRL_F6, KEY_CTRL_F6, KE
 
 int main(void) {
     Bdisp_AllClr_VRAM();
+    Bdisp_EnableColor(1);
 
     SetQuitHandler(quithandler);
 
@@ -18,6 +19,12 @@ int main(void) {
     //change_freq(PLL_18x);
 
     Rom rom = main_menu_ui(keybinds);
+    uint16_t vram_local[32768];
+    PPU.VRAM = vram_local;
+    uint16_t cgram_local[256];
+    PPU.CGRAM = cgram_local;
+    Tile tiles_local[4096];
+    PPU.TILES = tiles_local;
     init_cpu(rom);//rom gets loaded here
 
     cycle_cpu();
