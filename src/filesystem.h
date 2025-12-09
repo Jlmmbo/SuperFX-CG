@@ -5,7 +5,7 @@
   unsigned long address;
 }file_type_t;*/
 
-Rom load_rom_fs(char** rom_list, byte rom_index){//may possibly hang for files larger that 1mb
+void load_rom_fs(char** rom_list, byte rom_index, Rom* rom){//may possibly hang for files larger that 1mb
     unsigned short file_name[50];
 
     char char_filename [100]= "\\\\fls0\\";
@@ -18,15 +18,13 @@ Rom load_rom_fs(char** rom_list, byte rom_index){//may possibly hang for files l
         error_msg("ROM not found");
         error_msg("There may be UB if you continue!");
         error_msg("Returning to Main Menu");
-
-        return main_menu_ui();
+        main_menu_ui(rom);
+        return;
     }
-    Rom rom;
-    rom.size = Bfile_GetFileSize_OS(handle);
-    rom.raw = sys_malloc(sizeof(byte) * rom.size);
-    Bfile_ReadFile_OS(handle, rom.raw, rom.size, 0);
+    rom->size = Bfile_GetFileSize_OS(handle);
+    rom->raw = sys_malloc(sizeof(byte) * rom->size);
+    Bfile_ReadFile_OS(handle, rom->raw, rom->size, 0);
     Bfile_CloseFile_OS(handle);
-    return rom;
 }
 
 void get_rom_list_fs(char** rom_list, byte* len){

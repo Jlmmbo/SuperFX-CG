@@ -160,7 +160,7 @@ void put_disp_strip(unsigned, unsigned);
 
 void pause_menu_ui();
 int map_key_ui(char*);
-Rom main_menu_ui();
+void main_menu_ui(Rom* rom);
 
 void error_msg(char*);
 void disp_msg(char*);

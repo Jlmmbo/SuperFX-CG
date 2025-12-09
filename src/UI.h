@@ -218,7 +218,7 @@ void settings_menu_ui(){
 }
 
 
-Rom main_menu_ui(){
+void main_menu_ui(Rom* rom){
    while (1){
       unsigned char menu_index = list_menu_ui("Main menu", (char*[]){"Settings", "Load ROM", "Exit"}, 3);
       switch (menu_index) {
@@ -236,8 +236,8 @@ Rom main_menu_ui(){
                error_msg("  No ROMs");
                break;
             }
-            Rom selected_rom = load_rom_fs(rom_selection_list, list_menu_ui("SELECT ROM", rom_selection_list, rom_list_len));
-            return selected_rom;
+            load_rom_fs(rom_selection_list, list_menu_ui("SELECT ROM", rom_selection_list, rom_list_len), rom);
+            return;
          }
          case 2:{
             Bdisp_AllClr_VRAM();

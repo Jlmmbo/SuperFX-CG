@@ -18,7 +18,8 @@ int main(void) {
     //optional overclock if needed
     //change_freq(PLL_18x);
 
-    Rom rom = main_menu_ui(keybinds);
+    Rom rom;
+    main_menu_ui(&rom);
     uint16_t vram_local[32768];
     PPU.VRAM = vram_local;
     uint16_t cgram_local[256];
