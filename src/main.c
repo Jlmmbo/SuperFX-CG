@@ -26,7 +26,7 @@ int main(void) {
     PPU.CGRAM = cgram_local;
     Tile tiles_local[4096];
     PPU.TILES = tiles_local;
-    init_cpu(rom);//rom gets loaded here
+    init_cpu(&rom);//rom gets loaded here
 
     cycle_cpu();
 

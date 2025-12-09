@@ -153,17 +153,17 @@ char mem_set(byte value, address addr){
 Will write rom to proper memory banks/regions, 
 and allocate used non-rom banks (e.g. ram, sram, i/o &c.)
 also mirror proper banks*/
-char write_rom(Rom rom){
+char write_rom(Rom* rom){
     CPUState* cpu = &CPU;
     cpu->rom_mode = 0x00;
 
-    if (rom.size > 0x007fc0 && rom.raw[0x007fc0] == 0){
+    if (rom->size > 0x007fc0 && rom->raw[0x007fc0] == 0){
         cpu->rom_mode = 0;//LoROM
     }
-    else if (rom.size > 0x00fc0 && rom.raw[0x00ffc0] == 1){
+    else if (rom->size > 0x00fc0 && rom->raw[0x00ffc0] == 1){
         cpu->rom_mode = 1;//HiROM
     }
-    else if (rom.size > 0x40ffc0 && rom.raw[0x40ffc0] == 5){
+    else if (rom->size > 0x40ffc0 && rom->raw[0x40ffc0] == 5){
         cpu->rom_mode = 5;//ExHiROM
     }
     //error_msg("rom mode found");
@@ -184,7 +184,7 @@ char write_rom(Rom rom){
 }
 
 /*start up cpu, initialize regs, set load interrupt vector etc.*/
-void init_cpu(Rom rom){
+void init_cpu(Rom* rom){
     CPUState* cpu = &CPU;
     PPUState* ppu = &PPU;
     disp_msg("allocating space...");
@@ -214,8 +214,8 @@ void init_cpu(Rom rom){
     cpu->P.D = 0;
     cpu->P.I = 1;
     cpu->P.E = 1;//set to emulation mode
-
-    cpu->rom = &rom;
+    
+    cpu->rom = rom;
     char err = write_rom(rom);
     if (err){//failed to allocate
         Bdisp_AllClr_VRAM();
