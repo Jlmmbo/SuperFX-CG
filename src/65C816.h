@@ -214,7 +214,7 @@ void init_cpu(Rom rom){
     cpu->P.D = 0;
     cpu->P.I = 1;
     cpu->P.E = 1;//set to emulation mode
-    
+
     cpu->rom = &rom;
     char err = write_rom(rom);
     if (err){//failed to allocate
@@ -259,193 +259,7 @@ void init_cpu(Rom rom){
     }
 }
 
-//absolute
-address a(){
-    CPUState* cpu = &CPU;
-    address addr = (cpu->PBR << 16) + cpu->PC;
-    return (cpu->DBR << 16) + mem_fetch(addr) + (mem_fetch(inc_addr(addr)) << 8);
-}
-
-//absolute indexed indirect
-address axi(){
-    CPUState* cpu = &CPU;
-    address addr = (cpu->PBR << 16) + cpu->PC;
-    return mem_fetch(addr) + mem_fetch((inc_addr(addr)) << 8) + cpu->X;
-}
-
-//absolute indexed X
-address ax(){
-    CPUState* cpu = &CPU;
-    address addr = (cpu->PBR << 16) + cpu->PC;
-    return (cpu->DBR << 16) + mem_fetch(addr) + (mem_fetch(inc_addr(addr)) << 8) + cpu->X;
-}
-
-//absolute indexed Y
-address ay(){
-    CPUState* cpu = &CPU;
-    address addr = (cpu->PBR << 16) + cpu->PC;
-    return (cpu->DBR << 16) + mem_fetch(addr) + (mem_fetch(inc_addr(addr)) << 8) + cpu->Y;
-}
-
-//absolute indirect
-address ai(){
-    CPUState* cpu = &CPU;
-    address addr = (cpu->PBR << 16) + cpu->PC;
-    return mem_fetch(addr) + (mem_fetch(inc_addr(addr)) << 8);
-}
-
-//absolute long indexed
-address alx(){
-    CPUState* cpu = &CPU;
-    address addr = (cpu->PBR << 16) + cpu->PC;
-    return mem_fetch((inc_addr(inc_addr(addr))) << 16) + mem_fetch(addr) + (mem_fetch(inc_addr(addr)) << 8) + cpu->X;
-}
-
-//absolute long
-address al(){
-    CPUState* cpu = &CPU;
-    address addr = (cpu->PBR << 16) + cpu->PC;
-    return mem_fetch((inc_addr(inc_addr(addr))) << 16) + mem_fetch(addr) + (mem_fetch(inc_addr(addr)) << 8);
-}
-
-//block move
-address xyc(){
-    CPUState* cpu = &CPU;
-    return (cpu->DBR << 16) + mem_fetch((cpu->PBR << 16) + cpu->PC);
-}
-
-//direct indexed indirect
-address dxi(){
-    CPUState* cpu = &CPU;
-    return (cpu->DBR << 16) + cpu->D + mem_fetch((cpu->PBR << 16) + cpu->PC) + cpu->X;
-}
-
-//direct indexed X
-address dx(){
-    CPUState* cpu = &CPU;
-    return cpu->D + mem_fetch((cpu->PBR << 16) + cpu->PC) + cpu->X;
-}
-
-//direct indexed Y
-address dy(){
-    CPUState* cpu = &CPU;
-    return cpu->D + mem_fetch((cpu->PBR << 16) + cpu->PC) + cpu->Y;
-}
-
-//direct indirect indexed
-address diy(){
-    CPUState* cpu = &CPU;
-    return add_addr((cpu->DBR << 16) + cpu->D + mem_fetch((cpu->PBR << 16) + cpu->PC), cpu->Y);
-}
-
-//direct long indirecte indexed
-address dliy(){
-    CPUState* cpu = &CPU;
-    return add_addr(cpu->D + mem_fetch((cpu->PBR << 16) + cpu->PC), cpu->Y);
-}
-
-//direct long indirect
-address dli(){
-    CPUState* cpu = &CPU;
-    return cpu->D + mem_fetch((cpu->PBR << 16) + cpu->PC);
-}
-
-//direct indirect
-address di(){
-    CPUState* cpu = &CPU;
-    return (cpu->DBR << 16) + cpu->D + mem_fetch((cpu->PBR << 16) + cpu->PC);
-}
-
-//direct
-address d(){
-    CPUState* cpu = &CPU;
-    return cpu->D + mem_fetch((cpu->PBR << 16) + cpu->PC);
-}
-
-// immediate
-address imm(){
-    CPUState* cpu = &CPU;
-    return (cpu->PBR << 16) + cpu->PC;
-}
-
-//no address
-address nil(){
-    return 0;
-}
-
-//relative long
-address rl(){
-    CPUState* cpu = &CPU;
-    return (cpu->PBR << 16) + cpu->PC;//////////////////////////////////////////////////////////////////////////////
-}
-
-//relative
-address r(){
-    CPUState* cpu = &CPU;
-    return (cpu->PBR << 16) + cpu->PC;//////////////////////////////////////////////////////////////////////////////
-}
-
-//stack
-address s(){
-    CPUState* cpu = &CPU;
-    return (cpu->S.h << 8) + cpu->S.l;
-}
-
-//direct stack
-address ds(){
-    CPUState* cpu = &CPU;
-    return add_addr((cpu->S.h << 8) + cpu->S.l, mem_fetch((cpu->PBR << 16) + cpu->PC));
-}
-
-//direct stack indirect indexed
-address dsiy(){
-    CPUState* cpu = &CPU;
-    return add_addr((cpu->DBR << 16) + (cpu->S.h << 8) + cpu->S.l + mem_fetch((cpu->PBR << 16) + cpu->PC), cpu->Y);
-}
-
-void disp_cpu_stats(){
-    CPUState* cpu = &CPU;
-    Bdisp_AllClr_VRAM();
-    char* tmp = "                               ";
-    PrintCXY(0, 1, "C", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(40, 1, "X", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(80, 1, "Y", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(120, 1, "S", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(160, 1, "D", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(200, 1, "E", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(240, 1, "IR", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(280, 1, "NI", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(320, 1, "PB", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(360, 1, "DB", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(0, 70, "PC", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(40, 70, "RS", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(80, 70, "rm", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(120, 70, "P", 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(160, 70, "IN", 0, -1, 0, COLOR_WHITE, 1, 0);
-
-    PrintCXY(0, 20, byte_to_str(cpu->C.h, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(0, 40, byte_to_str(cpu->C.l, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(40, 20, byte_to_str(cpu->X >> 8, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(40, 40, byte_to_str(cpu->X & 0xFF, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(80, 20, byte_to_str(cpu->Y >> 8, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(80, 40, byte_to_str(cpu->Y & 0xFF, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(120, 20, byte_to_str(cpu->S.h, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(120, 40, byte_to_str(cpu->S.l, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(160, 20, byte_to_str(cpu->D >> 8, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(160, 40, byte_to_str(cpu->D & 0xFF, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(200, 20, byte_to_str(cpu->E, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(240, 20, byte_to_str(cpu->IRQ, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(280, 20, byte_to_str(cpu->NMI, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(320, 20, byte_to_str(cpu->PBR, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(360, 20, byte_to_str(cpu->DBR, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(0, 90, byte_to_str(cpu->PC >> 8, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(0, 110, byte_to_str(cpu->PC & 0xFF, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(40, 90, byte_to_str(cpu->RES, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(80, 90, byte_to_str(cpu->rom_mode, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(120, 90, byte_to_str(status_to_byte(cpu->P), tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    PrintCXY(160, 90, byte_to_str(mem_fetch((cpu->PBR << 16) + cpu->PC), tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
-    //GetKey(NULL);
-}
+#include "addr_modes.h"
 
 //BReaK
 void BRK(address addr){
@@ -1822,6 +1636,7 @@ char run_instr_cpu(){
 }
 
 void cycle_cpu(){
+    disp_cpu_stats();
     run_instr_cpu();
     keyupdate();
     if(keydownlast(KEY_CTRL_MENU)) pause_menu_ui();
