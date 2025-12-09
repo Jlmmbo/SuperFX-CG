@@ -40,8 +40,8 @@ void PPU_dot(){
 
     tilemap_entry = PPU.VRAM[tilemap_addr + tile_y * map_width + tile_x];
     uint16_t tile = tilemap_entry & 0x3FF;
-    byte palette = (tilemap_entry >> 10) & 7;
-    byte priority = (tilemap_entry >> 13) & 1;
+    //byte palette = (tilemap_entry >> 10) & 7;
+    //byte priority = (tilemap_entry >> 13) & 1;
     byte hflip = (tilemap_entry >> 14) & 1;
     byte vflip = (tilemap_entry >> 15) & 1;
 
