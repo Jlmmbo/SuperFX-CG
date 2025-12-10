@@ -122,11 +122,6 @@ typedef struct PPUState{
     Tile* TILES;
 }PPUState;
 
-typedef struct Rom{
-    byte* raw;
-    long int size:24;//long to ensure at least 24 bits reg. int may only be 16
-}Rom;
-
 typedef struct CPUState{
     byte NMI:1;
     byte IRQ:1;
@@ -140,9 +135,7 @@ typedef struct CPUState{
     two_bytes S;//stack address register
     byte DBR;//data bank register
     byte PBR;//program bank register
-    byte* mem[256];//mem bank pointers
     unsigned int rom_mode;
-    Rom* rom;
 }CPUState;
 
 CPUState CPU;
@@ -160,15 +153,21 @@ void put_disp_strip(unsigned, unsigned);
 
 void pause_menu_ui();
 int map_key_ui(char*);
-void main_menu_ui(Rom* rom);
+void main_menu_ui();
 
-void disp_rom(Rom* rom);
+void disp_rom(void*, address);
 
 void error_msg(char*);
 void disp_msg(char*);
 
 byte mem_fetch(address addr);
 char mem_set(byte value, address addr);
+
+void fetch_rom_bank_fs(byte);
+void fetch_ram_bank_fs(byte);
+
+void init_rom(char**, byte);
+void init_ram();
 
 void update_TILES();
 
@@ -182,6 +181,20 @@ byte cgram_byte;
 byte cgram_latch;
 
 uint16_t vram_latch;
+
+byte curr_rom_bank[0x8000];
+byte curr_rom_bank_index;
+
+byte curr_ram_bank[0x8000];
+byte curr_ram_bank_index;
+
+int rom_handle;
+address rom_size;
+
+int ram_handle;
+
+unsigned short rom_file_name[100];
+unsigned short ram_file_name[100];
 
 char tmp[50];
 
@@ -210,12 +223,15 @@ int keydownhold(int basic_keycode) {
 
 void quithandler(){
     change_freq(PLL_16x);
+    Bfile_CloseFile_OS(rom_handle);
+    Bfile_CloseFile_OS(ram_handle);
+    Bfile_DeleteEntry(ram_file_name);
 }
 
 byte* mem_ptr(address addr){
-    CPUState* cpu = &CPU;
     mem_fetch(addr);//to allocate if needed
-    return (byte*)&(cpu->mem[addr >> 16][addr & 0x00FFFF]);
+    if((addr & 0xFFFF) >= 0x8000) return (byte*)&(curr_rom_bank[addr & 0x007FFF]);
+    else return (byte*)&(curr_ram_bank[addr & 0x007FFF]);
 }
 
 #include "binary.h"

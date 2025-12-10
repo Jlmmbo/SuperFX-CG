@@ -70,7 +70,7 @@ address mem_get_addr(address addr, byte rom_mode){
 
 address conv_cpu_to_rom_addr(address addr){
     if (addr < 0x8000) return 0;//not mapped to rom
-    return (addr >> 16) * 0x8000 + ((addr & 0xFFFF) - 0x8000);
+    return (addr >> 16) * 0x8000 + ((addr & 0x7FFF) - 0x8000);
 }
 
 /*Fetch memory from address in bank.
@@ -78,13 +78,14 @@ address conv_cpu_to_rom_addr(address addr){
 byte mem_fetch(address addr){
     CPUState* cpu = &CPU;
     if((addr & 0x00FFFF) > 0x8000){//is a rom sector
-        return cpu->rom->raw[(conv_cpu_to_rom_addr(addr))];
+        if(curr_rom_bank_index != addr >> 16){
+            curr_rom_bank_index = addr >> 16;
+            fetch_rom_bank_fs(curr_rom_bank_index);
+        }
+        return curr_rom_bank[(((addr & 0xFFFF) - 0x8000) & 0x7FFF)];
     }
     addr = mem_get_addr(addr, cpu->rom_mode);
-    byte bank = addr >> 16;
-    if(cpu->mem[bank]==NULL){
-        cpu->mem[bank] = (byte*)sys_malloc(65536 * sizeof(byte));
-    }
+    //byte bank = addr >> 16;
     if((addr >= 0x2100) || (addr <= 0x21FF)){//MMIO regs
         if(addr == 0x213B){//CGDATAREAD
             if(cgram_byte){
@@ -114,7 +115,7 @@ byte mem_fetch(address addr){
             return val;
         }
     }
-    return cpu->mem[addr >> 16][addr & 0xFFFF];
+    return curr_ram_bank[addr & 0xFFFF];
 }
 
 /*set memory at address in bank.
@@ -124,9 +125,6 @@ char mem_set(byte value, address addr){
     addr = mem_get_addr(addr, cpu->rom_mode);
     if(((addr >> 16) < 0x3F) && ((addr & 0x00FFFF) > 0x8000)){//is a rom sector
         return 0;
-    }
-    if(cpu->mem[addr >> 16]==NULL){
-        cpu->mem[addr >> 16] = (byte*)sys_malloc(65536 * sizeof(byte));
     }
     if(addr > 0x2100 && addr < 0x21FF){//MMIO regs
         if(addr == 0x2118 || addr == 0x2119){//VMDATA
@@ -148,9 +146,11 @@ char mem_set(byte value, address addr){
         }
         if(addr == 0x2121) cgram_byte = 0;//CGADD
     }
-    //todo: if addr would be rom, do nothing
-    cpu->mem[addr >> 16][addr & 0xFFFF] = value;
-    //ppu regs at 2100-213f: also set cpu->ppu.-----
+    if(curr_ram_bank_index != addr >> 16){
+        curr_ram_bank_index = addr >> 16;
+        fetch_ram_bank_fs(curr_ram_bank_index);
+    }
+    curr_ram_bank[addr & 0xFFFF] = value;
     return 0;
 }
 
@@ -158,18 +158,20 @@ char mem_set(byte value, address addr){
 Will write rom to proper memory banks/regions, 
 and allocate used non-rom banks (e.g. ram, sram, i/o &c.)
 also mirror proper banks*/
-char write_rom(Rom* rom){
+char write_rom(){
     CPUState* cpu = &CPU;
     cpu->rom_mode = 0x00;
 
-    if (rom->size > 0x007fc0 && rom->raw[0x007fc0] == 0){
+    if (rom_size > 0x007fc0 && mem_fetch(0x007fc0) == 0){
         cpu->rom_mode = 0;//LoROM
     }
-    else if (rom->size > 0x00fc0 && rom->raw[0x00ffc0] == 1){
+    else if (rom_size > 0x00fc0 && mem_fetch(0x00ffc0) == 1){
         cpu->rom_mode = 1;//HiROM
     }
-    else if (rom->size > 0x40ffc0 && rom->raw[0x40ffc0] == 5){
+    else if (rom_size > 0x40ffc0 && mem_fetch(0x40ffc0) == 5){
         cpu->rom_mode = 5;//ExHiROM
+    } else {
+        error_msg("rom mode not found");
     }
     //error_msg("rom mode found");
     //address rom_offset = 0;
@@ -189,18 +191,9 @@ char write_rom(Rom* rom){
 }
 
 /*start up cpu, initialize regs, set load interrupt vector etc.*/
-void init_cpu(Rom* rom){
+void init_cpu(){
     CPUState* cpu = &CPU;
     PPUState* ppu = &PPU;
-    disp_msg("allocating space...");
-    /*for (int i = 0; i < 0x7F; i++){
-        for (int j = 0; j < 65536; j++){
-            cpu->mem[i][j] = 0;
-        }
-    }
-    for (int i = 0; i < 0x7F; i++){//double check all banks are allocated
-        mem_fetch(i << 16);
-    }*/
 
     cpu->E = 1;
     
@@ -220,8 +213,13 @@ void init_cpu(Rom* rom){
     cpu->P.I = 1;
     cpu->P.E = 1;//set to emulation mode
     
-    cpu->rom = rom;
-    char err = write_rom(rom);
+    disp_msg("init ram");
+    init_ram();
+    disp_msg("fetch rom");
+    fetch_rom_bank_fs(0);
+    disp_msg("fetch ram");
+    fetch_ram_bank_fs(0);
+    char err = write_rom();
     if (err){//failed to allocate
         Bdisp_AllClr_VRAM();
         PrintXY(1, 1, "  GET MORE SPACE!!", 0, 0);

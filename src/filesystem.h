@@ -5,40 +5,60 @@
   unsigned long address;
 }file_type_t;*/
 
-void load_rom_fs(char** rom_list, byte rom_index, Rom* rom){//may possibly hang for files larger that 1mb
-    unsigned short file_name[50];
+#define ROM_FORMAT "\\\\fls0\\*.sfc"
 
+void init_rom(char** rom_list, byte rom_index){
     char char_filename [100]= "\\\\fls0\\";
     strcat(char_filename, rom_list[rom_index]);
     
-    Bfile_StrToName_ncpy(file_name, char_filename, 49);
+    Bfile_StrToName_ncpy(rom_file_name, char_filename, 49);
+    int err = Bfile_OpenFile_OS(rom_file_name, READ, 0);
+    if(err < 0) error_msg("rom path error");
+}
 
-    int handle = Bfile_OpenFile_OS(file_name, 0, 0);
-    if(handle < 0){
-        error_msg("ROM not found");
-        error_msg("There may be UB if you continue!");
-        error_msg("Returning to Main Menu");
-        main_menu_ui(rom);
-        return;
+void init_ram(){
+    char char_filename[30]= "\\\\fls0\\SNES_ram.dat";
+    Bfile_StrToName_ncpy(ram_file_name, char_filename, 29);
+    size_t fsize = 65536;
+    int err = Bfile_CreateEntry_OS(ram_file_name, CREATEMODE_FILE, &fsize);
+    if(err < 0) error_msg("ram create error");
+    int handle = Bfile_OpenFile_OS(ram_file_name, READ, 0);
+    if(handle < 0) error_msg("ram path error");
+    // Bfile_CloseFile_OS(handle);
+}
+
+void fetch_rom_bank_fs(byte bank){
+    bank &= 0x7F;//to un-mirror
+    if(CPU.rom_mode == 0){//deal w/ other rom modes
+        rom_handle = Bfile_OpenFile_OS(rom_file_name, READ, 0);
+        Bfile_ReadFile_OS(rom_handle, curr_rom_bank, 65536, bank * 0x8000);
+        // Bfile_CloseFile_OS(rom_handle);
     }
-    rom->size = Bfile_GetFileSize_OS(handle);
-    rom->raw = sys_malloc(rom->size);
-    if(rom->raw == NULL) error_msg("couldnt alloc raw");
-    Bfile_ReadFile_OS(handle, rom->raw, 100, 0);
-    Bfile_CloseFile_OS(handle);
-    if(rom->raw == NULL) error_msg("couldnt read rom");
-    disp_rom(rom);
+}
+
+void fetch_ram_bank_fs(byte bank){
+    bank &= 0x7F;//to un-mirror
+    rom_handle = Bfile_OpenFile_OS(ram_file_name, READ, 0);
+    Bfile_ReadFile_OS(ram_handle, curr_ram_bank, 65536, bank * 0x8000);
+    // Bfile_CloseFile_OS(ram_handle);
+}
+
+void write_ram_bank_fs(byte bank){
+    bank &= 0x7F;//to un-mirror
+    rom_handle = Bfile_OpenFile_OS(ram_file_name, WRITE, 0);
+    Bfile_WriteFile_OS(ram_handle, curr_ram_bank, 65536);
+    // Bfile_CloseFile_OS(ram_handle);
 }
 
 void get_rom_list_fs(char** rom_list, byte* len){
     *len = 0;
     
+    unsigned short* FoundFile = sys_malloc(64);
     int FindHandle;
-    unsigned short* FoundFile = sys_malloc(sizeof(unsigned short) * 32);
     file_type_t fileinfo = {0, 0, 0, 0, 0, 0};
 
-    unsigned short pathname[0x100];
-    Bfile_StrToName_ncpy(pathname, "\\\\fls0\\*.sfc", 0x100);
+    unsigned short pathname[sizeof(ROM_FORMAT) * 2];
+    Bfile_StrToName_ncpy(pathname, ROM_FORMAT, sizeof(ROM_FORMAT));
     
     int err = Bfile_FindFirst(pathname, &FindHandle, FoundFile, &fileinfo);//if the file is larger that 2mb, too bad... :(
     int i = 0;
@@ -47,8 +67,24 @@ void get_rom_list_fs(char** rom_list, byte* len){
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
         return;
+    } else if (err == -1) {
+        error_msg("bad path name");
+        rom_list = NULL;
+        Bfile_FindClose(FindHandle);
+        return;
+    } else if (err == -5) {
+        error_msg("bad prefix");
+        rom_list = NULL;
+        Bfile_FindClose(FindHandle);
+        return;
+    } else if (err == -8) {
+        error_msg("corrupted file?? Error");
+        rom_list = NULL;
+        Bfile_FindClose(FindHandle);
+        return;
     } else if (err < 0) {
-        error_msg("  Path Error");
+        error_msg("Path Error");
+        error_msg(byte_to_str(err, tmp));
         rom_list = NULL;
         Bfile_FindClose(FindHandle);
         return;
@@ -65,8 +101,9 @@ void get_rom_list_fs(char** rom_list, byte* len){
             sys_free(FoundFile);
             return;
         } else if (err < 0){
-            error_msg("  path ERROR");
+            error_msg("path ERROR");
             sys_free(FoundFile);
+            Bfile_FindClose(FindHandle);
             return;
         }
         if (err == 0){

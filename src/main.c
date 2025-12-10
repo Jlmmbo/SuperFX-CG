@@ -17,22 +17,15 @@ int main(void) {
 
     //optional overclock if needed
     //change_freq(PLL_18x);
-    for(byte i = 0; i < 128; i++){
-        CPU.mem[i] = sys_malloc(32768);//bottom half is rom, no need to allocate
-        if(CPU.mem[i] == NULL) {
-            error_msg("cant alloc ram bank");
-            error_msg(byte_to_str(i, tmp));
-        }
-    }
-    Rom rom;
-    main_menu_ui(&rom);
+    
+    main_menu_ui();
     uint16_t vram_local[32768];
     PPU.VRAM = vram_local;
     uint16_t cgram_local[256];
     PPU.CGRAM = cgram_local;
     Tile tiles_local[4096];
     PPU.TILES = tiles_local;
-    init_cpu(&rom);//rom gets loaded here
+    init_cpu();//rom gets loaded here
 
     cycle_cpu();
 

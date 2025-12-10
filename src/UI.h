@@ -218,7 +218,7 @@ void settings_menu_ui(){
 }
 
 
-void main_menu_ui(Rom* rom){
+void main_menu_ui(){
    while (1){
       unsigned char menu_index = list_menu_ui("Main menu", (char*[]){"Settings", "Load ROM", "Exit"}, 3);
       switch (menu_index) {
@@ -236,7 +236,7 @@ void main_menu_ui(Rom* rom){
                error_msg("  No ROMs");
                break;
             }
-            load_rom_fs(rom_selection_list, list_menu_ui("SELECT ROM", rom_selection_list, rom_list_len), rom);
+            init_rom(rom_selection_list, list_menu_ui("SELECT ROM", rom_selection_list, rom_list_len));
             return;
          }
          case 2:{
@@ -275,7 +275,8 @@ void disp_msg(char* msg){
    LoadVRAM_1();
 }
 
-void disp_rom(Rom* rom){
+void disp_rom(void* ptr, address size){
+   byte* addr = (byte*)ptr;
    Bdisp_AllClr_VRAM();
    byte x = 0;
    uint16_t y = 0;
@@ -285,17 +286,17 @@ void disp_rom(Rom* rom){
       Bdisp_AllClr_VRAM();
       for(i = 0; i < 8; i++){
          for(j = 0; j < 8; j++){
-            PrintCXY(i * 30, j * 30, byte_to_str(rom->raw[(y+j) * 8+ (x+i)], tmp), TEXT_MODE_NORMAL, -1, COLOR_BLACK, COLOR_WHITE, 1, 0);
-            PrintCXY(i * 15 + 240, j * 30, (char*)&rom->raw[(y+j) * 8+ (x+i)], TEXT_MODE_NORMAL, -1, COLOR_BLACK, COLOR_WHITE, 1, 0);
+            PrintCXY(i * 30, j * 30, byte_to_str(addr[(y+j) * 8+ (x+i)], tmp), TEXT_MODE_NORMAL, -1, COLOR_BLACK, COLOR_WHITE, 1, 0);
+            PrintCXY(i * 15 + 240, j * 30, (char*)&(addr[(y+j) * 8+ (x+i)]), TEXT_MODE_NORMAL, -1, COLOR_BLACK, COLOR_WHITE, 1, 0);
          }
       }
       GetKey(&k);
       if(k ==KEY_CTRL_UP){
-         if(y == 0) y = rom->size;
+         if(y == 0) y = 0;
          else y--;
       }
       if(k == KEY_CTRL_DOWN){
-         if(y >= rom->size - 1) y = 0;
+         if(y >= size - 1) y = size - 1;
          else y++;
       }
       if(k == KEY_CTRL_LEFT){
