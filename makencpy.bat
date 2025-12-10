@@ -1,6 +1,8 @@
 @echo off
 setlocal
 
+call ./clean.bat
+
 pushd "%~dp0"
 
 rem Prefer calling make.bat if present, otherwise try an executable named make
