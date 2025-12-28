@@ -5,18 +5,12 @@
 #define A1TnL(N) (*mem_ptr(0x4302 + ((N) << 4)))
 #define A1TnH(N) (*mem_ptr(0x4303 + ((N) << 4)))
 #define A1Bn(N) (*mem_ptr(0x4304 + ((N) << 4)))
-
 #define DASnL(N) (*mem_ptr(0x4305 + ((N) << 4)))
 #define DASnH(N) (*mem_ptr(0x4306 + ((N) << 4)))
 #define DASBn(N) (*mem_ptr(0x4307 + ((N) << 4)))
-
 #define A2AnL(N) (*mem_ptr(0x4308 + ((N) << 4)))
-
 #define A2AnH(N) (*mem_ptr(0x4309 + ((N) << 4)))
-
 #define NLTRn(N) (*mem_ptr(0x430A + ((N) << 4)))
-
-//#define UNUSEDn(N) (*mem_ptr(cpu, 0x4300 + ((n) << 4)))
 
 const byte hdma_num_bytes_trans[8] = {1, 2, 2, 4, 4, 4, 2, 4};
 const byte hdma_trans_patterns[8][4] = {{0,0,0,0},{0,1,0,0},{0,0,0,0},{0,0,1,1},{0,1,2,3},{0,1,0,1},{0,0,0,0},{0,0,1,1}};
@@ -27,7 +21,7 @@ void doDMA(byte channel, byte hdma){
     address addr;
     if(hdma){
         byte i;
-        if(!(dmap & 0b01000000)){//indirect hdma
+        if(!(dmap & 0b01000000)){//hdma indirect
             byte trans_pattern = dmap & 0b00000111;
             //A2AnL(channel) = A1TnL(channel);
             //A2AnH(channel) = A1TnH(channel);
@@ -44,19 +38,19 @@ void doDMA(byte channel, byte hdma){
             }
         }
     } else {
-        if (dmap & 0b10000000){//copy from b to a
-            val = mem_fetch(BBADn(channel));//todo: clamp to 2100-21ff
+        if (dmap & 0b10000000){//copier de b a a
+            val = mem_fetch(BBADn(channel));//a faire: clamp a 2100-21ff
             addr = (A1Bn(channel) << 16) + (A1TnH(channel) << 8) + A1TnL(channel);
         } else {
             val = mem_fetch((A1Bn(channel) << 16) + (A1TnH(channel) << 8) + A1TnL(channel));
-            addr = BBADn(channel);//todo: clamp to 2100-21ff
+            addr = BBADn(channel);//a faire: clamp a 2100-21ff
         }
         while((DASnH(channel) != 0) && (DASnL(channel) != 0)){
             mem_set(val, addr);
 
-            if(!(dmap & 0b00001000)){//not fixed addr
-                addr -= ((dmap & 0b00010000) >> 3) - 1;//if 0: addr -= -1 else: addr -= (2) - 1
-                //todo: clamp to 2100-21ff
+            if(!(dmap & 0b00001000)){//pas d'addresse fixe
+                addr -= ((dmap & 0b00010000) >> 3) - 1;//si 0: addr -= -1 sinon: addr -= (2) - 1
+                //a faire: clamp a 2100-21ff
             }
 
             DASnH(channel) -= DASnL(channel) == 0;

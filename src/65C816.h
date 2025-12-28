@@ -78,11 +78,7 @@ address conv_cpu_to_rom_addr(address addr){
 byte mem_fetch(address addr){
     CPUState* cpu = &CPU;
     if((addr & 0x00FFFF) > 0x8000){//is a rom sector
-        if(curr_rom_bank_index != addr >> 16){
-            curr_rom_bank_index = addr >> 16;
-            fetch_rom_bank_fs(curr_rom_bank_index);
-        }
-        return curr_rom_bank[(((addr & 0xFFFF) - 0x8000) & 0x7FFF)];
+        return rom_ptr[(addr & 0xFF0000) | ((addr - 0x8000) & 0x7FFF)];
     }
     addr = mem_get_addr(addr, cpu->rom_mode);
     //byte bank = addr >> 16;
@@ -155,7 +151,7 @@ char mem_set(byte value, address addr){
 }
 
 /*
-Will write rom to proper memory banks/regions, 
+Will write rom to proper memory banks/regions,
 and allocate used non-rom banks (e.g. ram, sram, i/o &c.)
 also mirror proper banks*/
 char write_rom(){
@@ -196,27 +192,26 @@ void init_cpu(){
     PPUState* ppu = &PPU;
 
     cpu->E = 1;
-    
+
     cpu->D = 0x0000;
-    
+
     cpu->DBR = 0x00;
     cpu->PBR = 0x00;
-    
+
     cpu->S.h = 0x01;
-    
+
     cpu->X &= 0x0011;
     cpu->Y &= 0x0011;
-    
+
     cpu->P.M = 1;
     cpu->P.X = 1;
     cpu->P.D = 0;
     cpu->P.I = 1;
     cpu->P.E = 1;//set to emulation mode
-    
+
     disp_msg("init ram");
     init_ram();
     disp_msg("fetch rom");
-    fetch_rom_bank_fs(0);
     disp_msg("fetch ram");
     fetch_ram_bank_fs(0);
     char err = write_rom();
@@ -477,7 +472,7 @@ void BIT(address addr){
     CPUState* cpu = &CPU;
     if(cpu->P.M == 0){//16-bit
         uint16_t v = mem_fetch(addr) + (mem_fetch(inc_addr(addr)) << 8);
-        two_bytes ans = (two_bytes){cpu->C.h & (v >> 8), cpu->C.l & (v & 0x00FF)}; 
+        two_bytes ans = (two_bytes){cpu->C.h & (v >> 8), cpu->C.l & (v & 0x00FF)};
         cpu->P.N = ans.h >> 7;
         cpu->P.V = (ans.h >> 6) & 0b01;//P.V = bit 14
         cpu->P.Z = (ans.h == 0) && (ans.l == 0);
@@ -1367,7 +1362,7 @@ const instr_data instructions[] = {
     {a, 3, ORA},
     {a, 3, ASL},
     {al, 2, ORA},
-    
+
     {r, 2, BPL},
     {diy, 2, ORA},
     {di, 2, ORA},
@@ -1384,7 +1379,7 @@ const instr_data instructions[] = {
     {ax, 3, ORA},
     {ax, 3, ASL},
     {alx, 4, ORA},
-    
+
     {a, 3, JSR},
     {dxi, 2, AND},
     {al, 4, JSL},
@@ -1486,7 +1481,7 @@ const instr_data instructions[] = {
     {ax, 3, ADC},
     {ax, 3, ROR},
     {alx, 4, ADC},
-    
+
     {r, 2, BRA},
     {dx, 2, STA},
     {rl, 3, BRL},
@@ -1537,7 +1532,7 @@ const instr_data instructions[] = {
     {a, 3, LDA},
     {a, 3, LDX},
     {al, 4, LDA},
-    
+
     {r, 2, BCS},
     {diy, 2, LDA},
     {di, 2, LDA},
@@ -1605,7 +1600,7 @@ const instr_data instructions[] = {
     {a, 3, SBC},
     {a, 3, INC},
     {al, 4, SBC},
-    
+
     {r, 2, BEQ},
     {diy, 2, SBC},
     {di, 2, SBC},
@@ -1639,7 +1634,7 @@ char run_instr_cpu(){
 }
 
 void cycle_cpu(){
-    disp_cpu_stats();
+    //disp_cpu_stats();
     run_instr_cpu();
     keyupdate();
     if(keydownlast(KEY_CTRL_MENU)) pause_menu_ui();

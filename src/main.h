@@ -74,22 +74,18 @@
 
 typedef unsigned char byte;
 
-typedef struct{
+/*typedef struct{
   unsigned short id, type;
   unsigned long fsize, dsize;
   unsigned int property;
   unsigned long address;
-} file_type_t;
+} file_type_t;*/
 
 typedef struct{
     byte h:8;//high byte
     byte l:8;//low byte
 }two_bytes;
 
-/*typedef struct address{
-    byte bank;
-    uint16_t addr;
-}address;*/
 typedef uint32_t address;
 
 typedef struct StatusReg{
@@ -182,14 +178,12 @@ byte cgram_latch;
 
 uint16_t vram_latch;
 
-byte curr_rom_bank[0x8000];
-byte curr_rom_bank_index;
-
 byte curr_ram_bank[0x8000];
 byte curr_ram_bank_index;
 
 int rom_handle;
 address rom_size;
+byte* rom_ptr;
 
 int ram_handle;
 
@@ -223,14 +217,13 @@ int keydownhold(int basic_keycode) {
 
 void quithandler(){
     change_freq(PLL_16x);
-    Bfile_CloseFile_OS(rom_handle);
     Bfile_CloseFile_OS(ram_handle);
     Bfile_DeleteEntry(ram_file_name);
 }
 
 byte* mem_ptr(address addr){
     mem_fetch(addr);//to allocate if needed
-    if((addr & 0xFFFF) >= 0x8000) return (byte*)&(curr_rom_bank[addr & 0x007FFF]);
+    if((addr & 0xFFFF) >= 0x8000) return (byte*)&(rom_ptr[(addr & 0xFF0000) | (addr & 0x007FFF)]);
     else return (byte*)&(curr_ram_bank[addr & 0x007FFF]);
 }
 

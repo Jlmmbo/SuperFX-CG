@@ -22,11 +22,9 @@ void update_TILES(){
 
 void PPU_dot(){
     PPUState* ppu = &PPU;
-    
+
     uint16_t tilemap_addr;
     uint16_t tilemap_entry;
-
-    //bgn_px = wrong thing !! deal w/ bitplanes!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
 
     tilemap_addr = (BG1SC >> 2) * 0x800;
 
@@ -52,26 +50,10 @@ void PPU_dot(){
     byte color_index = PPU.TILES[tile].data[py][px];
 
     uint16_t color = 0x00;//set to default bg color
-
-    //placeholder, find a better way to implement priorities for multiple modes
-    /*if(bg1_priority){
-            px = bg1_px;
-            palette = bg1_palette;
-    }*/
     color_t palet[] = {0x0000, 0xF800, 0x07E0, 0x001F, 0xFFE0, 0x008F, 0xFFFF, 0x0000};
     //color = ppu_CGRAM[palette + color_index];
     color = palet[color_index];
-
-    //color = ((color & 0b011111111100000) << 1) + (color & 0b0000000000011111);//convert from rgb555 to rgb565
     set_SNES_pixel(color);
-
-    //Apply window masks
-    //Perform color math (if enabled)
-    //Output final pixel (256 visible dots only)
-
-    //Update H/V counters
-
-    //Trigger scanline events if appropriate
 }
 
 void generate_frame(){
@@ -85,7 +67,7 @@ void generate_frame(){
         }
         if(keydownlast(KEY_PRGM_MENU)) pause_menu_ui();
         put_disp();
-        for(i = 0; i < 8; i++){//decrement all hdma scanline counters
+        for(i = 0; i < 8; i++){//decrement tout les compteurs de scanline pour le HDMA
             NLTRn(i)--;
         }
         cpu->IRQ = 1;//H_blank
