@@ -186,6 +186,50 @@ char write_rom(){
     return 0;
 }
 
+void disp_cpu_stats(){
+    CPUState* cpu = &CPU;
+    Bdisp_AllClr_VRAM();
+    char* tmp = "                               ";
+    PrintCXY(0, 1, "C", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(40, 1, "X", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(80, 1, "Y", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(120, 1, "S", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(160, 1, "D", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(200, 1, "E", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(240, 1, "IR", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(280, 1, "NI", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(320, 1, "PB", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(360, 1, "DB", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(0, 70, "PC", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(40, 70, "RS", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(80, 70, "rm", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(120, 70, "P", 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(160, 70, "IN", 0, -1, 0, COLOR_WHITE, 1, 0);
+
+    PrintCXY(0, 20, byte_to_str(cpu->C.h, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(0, 40, byte_to_str(cpu->C.l, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(40, 20, byte_to_str(cpu->X >> 8, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(40, 40, byte_to_str(cpu->X & 0xFF, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(80, 20, byte_to_str(cpu->Y >> 8, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(80, 40, byte_to_str(cpu->Y & 0xFF, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(120, 20, byte_to_str(cpu->S.h, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(120, 40, byte_to_str(cpu->S.l, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(160, 20, byte_to_str(cpu->D >> 8, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(160, 40, byte_to_str(cpu->D & 0xFF, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(200, 20, byte_to_str(cpu->E, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(240, 20, byte_to_str(cpu->IRQ, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(280, 20, byte_to_str(cpu->NMI, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(320, 20, byte_to_str(cpu->PBR, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(360, 20, byte_to_str(cpu->DBR, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(0, 90, byte_to_str(cpu->PC >> 8, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(0, 110, byte_to_str(cpu->PC & 0xFF, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(40, 90, byte_to_str(cpu->RES, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(80, 90, byte_to_str(cpu->rom_mode, tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(120, 90, byte_to_str(status_to_byte(cpu->P), tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    PrintCXY(160, 90, byte_to_str(mem_fetch((cpu->PBR << 16) + cpu->PC), tmp), 0, -1, 0, COLOR_WHITE, 1, 0);
+    //GetKey(NULL);
+}
+
 /*start up cpu, initialize regs, set load interrupt vector etc.*/
 void init_cpu(){
     CPUState* cpu = &CPU;

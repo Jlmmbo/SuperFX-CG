@@ -74,13 +74,6 @@
 
 typedef unsigned char byte;
 
-/*typedef struct{
-  unsigned short id, type;
-  unsigned long fsize, dsize;
-  unsigned int property;
-  unsigned long address;
-} file_type_t;*/
-
 typedef struct{
     byte h:8;//high byte
     byte l:8;//low byte
@@ -152,6 +145,8 @@ int map_key_ui(char*);
 void main_menu_ui();
 
 void disp_rom(void*, address);
+
+void disp_cpu_stats();
 
 void error_msg(char*);
 void disp_msg(char*);
