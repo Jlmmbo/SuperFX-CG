@@ -65,23 +65,23 @@ void CopySprite(color_t* sprite, int x, int y, int width, int height) {
       }
       VRAM += LCD_WIDTH_PX-width;
    }
-} 
+}
 
-void CopySpriteMaskedAlpha(const void*datar, int x, int y, int width, int height, color_t maskcolor, int alpha) { 
-   color_t*data = (color_t*) datar; 
-   color_t* VRAM = (color_t*)GetVRAMAddress(); 
-   VRAM += LCD_WIDTH_PX*y + x; 
-   alpha %= 32; 
-   for(int j=y; j<y+height; j++) { 
-      for(int i=x; i<x+width;  i++) { 
-         if (*(data) != maskcolor) { 
-         *(VRAM) = (color_t)((((int)(*data & 0xf81f) * alpha + (int)(*VRAM & 0xf81f) * (32-alpha) + 0x8010) >> 5) & 0xf81f) | 
-                (color_t)((((int)(*data & 0x07e0) * alpha + (int)(*VRAM & 0x07e0) * (32-alpha) + 0x0400) >> 6) & 0x07e0); 
-           VRAM++; data++; 
-         } else { VRAM++; data++; } 
+void CopySpriteMaskedAlpha(const void*datar, int x, int y, int width, int height, color_t maskcolor, int alpha) {
+   color_t*data = (color_t*) datar;
+   color_t* VRAM = (color_t*)GetVRAMAddress();
+   VRAM += LCD_WIDTH_PX*y + x;
+   alpha %= 32;
+   for(int j=y; j<y+height; j++) {
+      for(int i=x; i<x+width;  i++) {
+         if (*(data) != maskcolor) {
+         *(VRAM) = (color_t)((((int)(*data & 0xf81f) * alpha + (int)(*VRAM & 0xf81f) * (32-alpha) + 0x8010) >> 5) & 0xf81f) |
+                (color_t)((((int)(*data & 0x07e0) * alpha + (int)(*VRAM & 0x07e0) * (32-alpha) + 0x0400) >> 6) & 0x07e0);
+           VRAM++; data++;
+         } else { VRAM++; data++; }
       }
-      VRAM += LCD_WIDTH_PX-width; 
-   } 
+      VRAM += LCD_WIDTH_PX-width;
+   }
 }
 
 void CopySpriteNbit(const unsigned char* data, int x, int y, int width, int height, const color_t* palette, unsigned int bitwidth) {
@@ -230,7 +230,8 @@ void main_menu_ui(){
             //load ROM
             char* rom_selection_list[] = {sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16),sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16), sys_malloc(sizeof(char) * 16)};
             byte rom_list_len;
-            get_rom_list_fs(rom_selection_list, &rom_list_len);
+            byte* rom_ptrs[8];
+            get_rom_list_fs(rom_selection_list, rom_ptrs, &rom_list_len);
             if(rom_selection_list == NULL || rom_list_len == 0){
                Bdisp_AllClr_VRAM();
                error_msg("  No ROMs");
@@ -353,7 +354,7 @@ void disp_rom(void* ptr, address size){
 // +    }
 //  }
 //  // ...existing code...
- 
+
 //  // Placeholder prototypes - implement these in your core
 //  void save_state(int slot);
 //  void load_state(int slot);

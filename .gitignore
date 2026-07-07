@@ -1,3 +1,5 @@
-/build
-/.vscode
-/.git
+build/
+.vscode/
+.git/
+SuperFX-CG.bin
+SuperFX-CG.g3a
